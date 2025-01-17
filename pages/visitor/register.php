@@ -18,7 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         User::signup($name, $email, $password, $role, $is_active);
         $showAlert = true;
-        $alertMessage = 'You have successfully registered as a ' . $role . '.';
+        $alertMessage = "You have successfully registered as a $role.";
         $alertRole = $role;
     } catch (Exception $e) {
         $error = $e->getMessage();
@@ -34,7 +34,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <title>Register Page</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
- 
     <script>
         function setRole(role) {
             document.getElementById('role').value = role;
@@ -52,9 +51,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             });
         }
-    </script>
 
+        document.addEventListener('DOMContentLoaded', function() {
+            <?php if ($showAlert): ?>
+                showAlert('<?php echo $alertMessage; ?>', '<?php echo $alertRole; ?>');
+            <?php endif; ?>
+        });
+    </script>
 </head>
+
 <body class="min-h-screen bg-slate-50 flex items-center justify-center p-4">
 <div class="w-full max-w-xl">
     <div class="bg-white rounded-2xl shadow-xl p-8 space-y-8 transform transition-all duration-500 hover:shadow-2xl">

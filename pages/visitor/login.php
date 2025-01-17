@@ -1,7 +1,11 @@
 <?php
+
 require_once __DIR__ . '/../../src/config/autoloader.php';
 
 use Models\User;
+
+$showAlert = false;
+$alertMessage = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = $_POST['email'];
@@ -9,36 +13,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     try {
         $user = User::signin($email, $password);
-
         // Start session and set user session variables
         session_start();
         $_SESSION['user_id'] = $user->getId();
         $_SESSION['user_name'] = $user->getName();
         $_SESSION['user_role'] = $user->getRole();
-
-        echo "<script>
-            Swal.fire({
-                title: 'Connexion réussie !',
-                text: 'Bienvenue, " . htmlspecialchars($user->getName()) . "!',
-                icon: 'success',
-                confirmButtonText: 'OK'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    window.location.href = 'home.php';
-                }
-            });
-        </script>";
-        exit();
+        $showAlert = true;
+        $alertMessage = "Welcome back, " . $user->getName() . "!";
     } catch (Exception $e) {
         $error = $e->getMessage();
-        echo "<script>
-            Swal.fire({
-                title: 'Erreur de connexion',
-                text: '" . htmlspecialchars($error) . "',
-                icon: 'error',
-                confirmButtonText: 'Réessayer'
-            });
-        </script>";
     }
 }
 ?>
@@ -48,12 +31,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <title>Login</title>
-    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="../../assets/css/style.css">
     <script src="https://cdn.tailwindcss.com"></script>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <title>Login Page</title>
+    <script>
+        function showAlert(message) {
+            Swal.fire({
+                title: 'Login Successful!',
+                text: message,
+                icon: 'success',
+                confirmButtonText: 'OK'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = 'home.php';
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            <?php if ($showAlert): ?>
+                showAlert('<?php echo $alertMessage; ?>');
+            <?php endif; ?>
+        });
+    </script>
 </head>
+
 <body class="min-h-screen bg-slate-50 flex items-center justify-center p-4">
 
 <div class="w-full max-w-md">
