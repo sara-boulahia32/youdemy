@@ -64,13 +64,22 @@ class Course {
         return $this->is_approved;
     }
 
-
     public function getTags() {
         $db = Database::getInstance()->getConnection();
-        $stmt = $db->prepare("SELECT Tags.name FROM Tags INNER JOIN Course_Tags ON Tags.id_tags = Course_Tags.id_tags WHERE Course_Tags.id_course = ?");
+        $stmt = $db->prepare("SELECT Tags.id_tags, Tags.name FROM Tags INNER JOIN Course_Tags ON Tags.id_tags = Course_Tags.id_tags WHERE Course_Tags.id_course = ?");
         $stmt->execute([$this->id]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $tags = [];
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $tags[] = new Tag($row['id_tags'], $row['name']);
+        }
+    
+        // Log the fetched tags for debugging
+        error_log("Course ID: " . $this->id . " Tags: " . json_encode($tags));
+        
+        return $tags;
     }
+    
 }
+
 
 ?>

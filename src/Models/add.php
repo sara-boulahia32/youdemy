@@ -34,18 +34,25 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $stmt = $db->prepare("INSERT INTO Courses (title, content, category, description, price, media_path, is_approved) VALUES (?, ?, ?, ?, ?, ?, ?)");
         if ($stmt->execute([$title, $media_path, $category, $description, $price, $media_path, $is_approved])) {
             $course_id = $db->lastInsertId();
+            error_log("Course inserted successfully with ID $course_id");
 
-            // Insert tags
+            // Insert tags and link them to the course
             foreach ($selectedTags as $tag) {
+                if (empty($tag['name'])) {
+                    throw new Exception("Tag name is empty.");
+                }
                 $stmt = $db->prepare("INSERT INTO Tags (name) VALUES (?) ON DUPLICATE KEY UPDATE id_tags=LAST_INSERT_ID(id_tags)");
                 if (!$stmt->execute([$tag['name']])) {
                     throw new Exception("Error inserting tag: " . $tag['name']);
                 }
                 $tag_id = $db->lastInsertId();
+                error_log("Tag inserted/updated successfully with ID $tag_id");
 
                 $stmt = $db->prepare("INSERT INTO Course_Tags (id_course, id_tags) VALUES (?, ?)");
                 if (!$stmt->execute([$course_id, $tag_id])) {
                     throw new Exception("Error linking tag ID $tag_id with course ID $course_id.");
+                } else {
+                    error_log("Tag ID $tag_id linked with course ID $course_id successfully.");
                 }
             }
 
@@ -59,3 +66,4 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
     exit;
 }
+?>

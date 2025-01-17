@@ -59,63 +59,65 @@ $courses = Course::getAll();
     </div>
   </div>
 
-  <!-- Courses Section -->
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-      <?php foreach ($courses as $course): ?>
-        <div class="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300">
-          <!-- Course Image -->
-          <?php if ($course->getMediaPath()): ?>
-            <div class="relative">
-              <img src="<?php echo htmlspecialchars($course->getMediaPath()); ?>" alt="<?php echo htmlspecialchars($course->getTitle()); ?>" class="w-full h-48 object-cover rounded-t-2xl">
-              <div class="absolute top-4 right-4 bg-white px-3 py-1 rounded-full text-sm font-medium text-violet-600">
-                $<?php echo htmlspecialchars($course->getPrice()); ?>
-              </div>
-            </div>
-          <?php endif; ?>
-
-          <!-- Course Content -->
-          <div class="p-6">
-            <!-- Tags -->
-            <div class="flex flex-wrap gap-2 mb-4">
-              <?php foreach ($course->getTags() as $tag): ?>
-                <span class="px-3 py-1 bg-violet-50 text-violet-600 rounded-full text-sm"><?php echo htmlspecialchars($tag->getName()); ?></span>
-              <?php endforeach; ?>
-            </div>
-
-            <!-- Title & Description -->
-            <h3 class="text-xl font-semibold text-slate-800 mb-2"><?php echo htmlspecialchars($course->getTitle()); ?></h3>
-            <p class="text-slate-600 text-sm mb-4"><?php echo htmlspecialchars(substr($course->getDescription(), 0, 100)); ?>...</p>
-
-            <!-- Stats -->
-            <div class="flex items-center gap-4 text-sm text-slate-600 mb-4">
-              <div class="flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-yellow-400 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.92 1.653-.92 1.953 0l2.179 6.699a1 1 0 00.95.691h7.044c.969 0 1.371 1.24.588 1.81l-5.693 4.147a1 1 0 00-.36 1.118l2.052 6.672c.296.953-.755 1.735-1.535 1.155l-5.738-4.285a1 1 0 00-1.174 0l-5.738 4.285c-.78.58-1.83-.202-1.535-1.155l2.052-6.672a1 1 0 00-.36-1.118l-5.693-4.147c-.783-.57-.38-1.81.588-1.81h7.044a1 1 0 00.95-.691l2.179-6.699z"/>
-                </svg>
-                4.8
-              </div>
-              <div class="flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-400 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 12h.01M10 16h.01M10 20h.01M14 12h.01M14 16h.01M14 20h.01"/>
-                </svg>
-                12,453 students
-              </div>
-            </div>
-
-            <!-- Instructor -->
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-2">
-                <img src="../../public/assets/img/Free Vector _ Hand drawn bookstore landing page template.jpeg" alt="Instructor" class="w-8 h-8 rounded-full">
-                <span class="text-sm text-slate-600">Sarah Johnson</span>
-              </div>
-              <button class="px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors">Enroll Now</button>
+<!-- Courses Section -->
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+    <?php foreach ($courses as $course): ?>
+      <div class="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300">
+        <!-- Course Image -->
+        <?php if ($course->getMediaPath()): ?>
+          <div class="relative">
+            <img src="<?php echo htmlspecialchars($course->getMediaPath()); ?>" alt="<?php echo htmlspecialchars($course->getTitle()); ?>" class="w-full h-48 object-cover rounded-t-2xl">
+            <div class="absolute top-4 right-4 bg-white px-3 py-1 rounded-full text-sm font-medium text-violet-600">
+              $<?php echo htmlspecialchars($course->getPrice()); ?>
             </div>
           </div>
+        <?php endif; ?>
+
+        <!-- Course Content -->
+        <div class="p-6">
+          <!-- Tags -->
+          <div class="flex flex-wrap gap-2 mb-4">
+            <?php foreach ($course->getTags() as $tag): ?>
+              <span class="px-3 py-1 bg-violet-50 text-violet-600 rounded-full text-sm">
+                <?php echo htmlspecialchars($tag->getName()); ?>
+              </span>
+            <?php endforeach; ?>
+          </div>
+
+          <!-- Title & Description -->
+          <h3 class="text-xl font-semibold text-slate-800 mb-2"><?php echo htmlspecialchars($course->getTitle()); ?></h3>
+          <p class="text-slate-600 text-sm mb-4"><?php echo htmlspecialchars(substr($course->getDescription(), 0, 100)); ?>...</p>
+
+          <!-- Stats -->
+          <div class="flex items-center gap-4 text-sm text-slate-600 mb-4">
+            <div class="flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-yellow-400 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.92 1.653-.92 1.953 0l2.179 6.699a1 1 0 00.95.691h7.044c.969 0 1.371 1.24.588 1.81l-5.693 4.147a1 1 0 00-.36 1.118l2.052 6.672c.296.953-.755 1.735-1.535 1.155l-5.738-4.285a1 1 0 00-1.174 0l-5.738 4.285c-.78.58-1.83-.202-1.535-1.155l2.052-6.672a1 1 0 00-.36-1.118l-5.693-4.147c-.783-.57-.38-1.81.588-1.81h7.044a1 1 0 00.95-.691l2.179-6.699z"/>
+              </svg>
+              4.8
+            </div>
+            <div class="flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-400 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 12h.01M10 16h.01M10 20h.01M14 12h.01M14 16h.01M14 20h.01"/>
+              </svg>
+              12,453 students
+            </div>
+          </div>
+
+          <!-- Instructor -->
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <img src="../../public/assets/img/Free Vector _ Hand drawn bookstore landing page template.jpeg" alt="Instructor" class="w-8 h-8 rounded-full">
+              <span class="text-sm text-slate-600">Sarah Johnson</span>
+            </div>
+            <button class="px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors">Enroll Now</button>
+          </div>
         </div>
-      <?php endforeach; ?>
-    </div>
+      </div>
+    <?php endforeach; ?>
   </div>
+</div>
 
   <!-- Teacher's Add Course Button -->
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

@@ -44,17 +44,19 @@ class Tag {
     public static function getAll() {
         $pdo = Database::getInstance()->getConnection();
         $stmt = $pdo->query("SELECT * FROM Tags");
-        $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $stmt->execute(); $tags = []; while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) { $tags[] = new self($row['id_tags'], $row['name']); } return $tags;
+    }
 
+    public static function search($query) {
+        $db = Database::getInstance()->getConnection();
+        $stmt = $db->prepare("SELECT * FROM Tags WHERE name LIKE ?");
+        $stmt->execute(["%$query%"]);
         $tags = [];
-        foreach ($result as $row) {
-            $tags[] = new Tag($row['id_tags'], $row['name']);
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $tags[] = new self($row['id_tags'], $row['name']);
         }
         return $tags;
     }
-
-    public static function search($query) { $db = Database::getInstance()->getConnection(); $stmt = $db->prepare("SELECT * FROM Tags WHERE name LIKE ?"); $stmt->execute(["%$query%"]); $tags = []; while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) { $tags[] = new self($row['id_tags'], $row['name']); } return $tags; }
-
     public function update() {
         $pdo = Database::getInstance()->getConnection();
         $stmt = $pdo->prepare("UPDATE Tag SET name = :name WHERE id = :id");
@@ -75,4 +77,5 @@ class Tag {
     public function setname($name) {
         $this->name = $name;
     }
+    
 }
