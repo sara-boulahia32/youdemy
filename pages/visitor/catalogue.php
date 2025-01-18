@@ -3,6 +3,50 @@ require_once __DIR__ . '/../../src/config/autoloader.php';
 
 use Models\Course;
 use Models\Category;
+use Database\Database;
+
+session_start(); // Start session to access logged-in user
+
+// Handle the enrollment logic
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['course_id'])) {
+    try {
+        $db = Database::getInstance()->getConnection();
+        $course_id = $_POST['course_id'];
+        $start_date = date('Y-m-d'); // Start date is today
+        $end_date = date('Y-m-d', strtotime('+1 year')); // End date is one year from today
+
+        // Get the logged-in user's ID
+        if (isset($_SESSION['user_id'])) {
+            $user_id = $_SESSION['user_id'];
+        } else {
+            throw new Exception("User is not logged in.");
+        }
+
+        // Insert the reservation
+        $stmt = $db->prepare("INSERT INTO Reservations (id_user, id_course, startDate, endDate) VALUES (?, ?, ?, ?)");
+        $stmt->execute([$user_id, $course_id, $start_date, $end_date]);
+
+        // Show success alert using SweetAlert
+        echo "<script>
+                Swal.fire({
+                  title: 'Success!',
+                  text: 'You have been successfully enrolled in the course.',
+                  icon: 'success',
+                  confirmButtonText: 'OK'
+                });
+              </script>";
+    } catch (Exception $e) {
+        // Show error alert using SweetAlert
+        echo "<script>
+                Swal.fire({
+                  title: 'Error!',
+                  text: 'There was an error enrolling in the course.',
+                  icon: 'error',
+                  confirmButtonText: 'OK'
+                });
+              </script>";
+    }
+}
 
 $coursesPerPage = isset($_GET['coursesPerPage']) ? (int) $_GET['coursesPerPage'] : 3;
 $page = isset($_GET['page']) ? (int) $_GET['page'] : 1;
@@ -25,7 +69,6 @@ if ($categoryFilter) {
 }
 
 $categories = Category::getAll();
-
 ?>
 
 <!DOCTYPE html>
@@ -142,8 +185,20 @@ $categories = Category::getAll();
               <img src="../../public/assets/img/Free Vector _ Hand drawn bookstore landing page template.jpeg" alt="Instructor" class="w-8 h-8 rounded-full">
               <span class="text-sm text-slate-600">Sarah Johnson</span>
             </div>
-            <!-- Buttons --> <div class="flex justify-between"> <a href="course_details.php?id=<?php echo $course->getid(); ?>" class="bg-transparent border-2 border-violet-600 text-violet-600 px-4 py-2 rounded-md hover:bg-violet-600 hover:text-white transition-all"> See Details </a> <form method="POST" action="catalogue.php" onsubmit="return enrollCourse(<?php echo $course->getId(); ?>);"> <input type="hidden" name="course_id" value="<?php echo $course->getid(); ?>"> <button type="submit" class="bg-violet-600 text-white px-4 py-2 rounded-md hover:bg-violet-700 transition-all"> Enroll Now </button> </form> </div>
-          </div>
+              <!-- Buttons -->
+  <div class="flex justify-between">
+    <a href="course_details.php?id=<?php echo $course->getId(); ?>" class="bg-transparent border-2 border-violet-600 text-violet-600 px-4 py-2 rounded-md hover:bg-violet-600 hover:text-white transition-all">
+      See Details
+    </a>
+    <form method="POST" action="">
+      <input type="hidden" name="course_id" value="<?php echo $course->getId(); ?>">
+      <button type="submit" class="bg-violet-600 text-white px-4 py-2 rounded-md hover:bg-violet-700 transition-all">
+        Enroll Now
+      </button>
+    </form>
+  </div>
+
+</div>
         </div>
       </div>
     <?php endforeach; ?>
@@ -347,11 +402,18 @@ document.getElementById('content_type').addEventListener('change', function() {
     }
 });
 </script>
-<script> 
-function enrollCourse(courseId){ 
-  Swal.fire({ title: 'Success!', text: 'You have been successfully enrolled in the course.', icon: 'success', confirmButtonText: 'OK' }); return true; // Submit the form 
-  } </script>
+<script>
+function enrollCourse(courseId) {
+  Swal.fire({
+    title: 'Success!',
+    text: 'You have been successfully enrolled in the course.',
+    icon: 'success',
+    confirmButtonText: 'OK'
+  });
+  return true; // Submit the form
+}
+</script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 </body>
 </html>
-  

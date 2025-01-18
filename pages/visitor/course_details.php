@@ -2,9 +2,51 @@
 require_once __DIR__ . '/../../src/config/autoloader.php';
 use Models\Course;
 use Models\User; // Ensure this model is included
-use Models\category; // Ensure this model is included
+use Database\Database;
+use models\category;
 
 session_start(); // Ensure session is started to check user role
+
+// Handle the enrollment logic
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['course_id'])) {
+    try {
+        $db = Database::getInstance()->getConnection();
+        $course_id = $_POST['course_id'];
+        $start_date = date('Y-m-d'); // Start date is today
+        $end_date = date('Y-m-d', strtotime('+1 year')); // End date is one year from today
+
+        // Get the logged-in user's ID
+        if (isset($_SESSION['user_id'])) {
+            $user_id = $_SESSION['user_id'];
+        } else {
+            throw new Exception("User is not logged in.");
+        }
+
+        // Insert the reservation
+        $stmt = $db->prepare("INSERT INTO Reservations (id_user, id_course, startDate, endDate) VALUES (?, ?, ?, ?)");
+        $stmt->execute([$user_id, $course_id, $start_date, $end_date]);
+
+        // Show success alert using SweetAlert
+        echo "<script>
+                Swal.fire({
+                  title: 'Success!',
+                  text: 'You have been successfully enrolled in the course.',
+                  icon: 'success',
+                  confirmButtonText: 'OK'
+                });
+              </script>";
+    } catch (Exception $e) {
+        // Show error alert using SweetAlert
+        echo "<script>
+                Swal.fire({
+                  title: 'Error!',
+                  text: 'There was an error enrolling in the course.',
+                  icon: 'error',
+                  confirmButtonText: 'OK'
+                });
+              </script>";
+    }
+}
 
 $courseId = isset($_GET['id']) ? (int) $_GET['id'] : 0;
 $course = Course::getById($courseId);
@@ -14,7 +56,6 @@ if (!$course) {
 $tags = $course->getTags();
 $category = Category::getById($course->getCategory());
 $author = User::getById($course->getauthor()); // Fetch the author details
-
 ?>
 
 <!DOCTYPE html>
@@ -78,7 +119,40 @@ $author = User::getById($course->getauthor()); // Fetch the author details
         </div>
 
 
-        <!-- Course Card - Right Side --> <div class="lg:col-span-1"> <div class="bg-slate-50 rounded-xl p-6"> <?php if ($course->getContentType() === 'image'): ?> <img src="<?php echo htmlspecialchars($course->getMediaPath()); ?>" alt="Course Preview" class="w-full rounded-lg mb-6" /> <?php elseif ($course->getContentType() === 'video'): ?> <video controls class="w-full rounded-lg mb-6"> <source src="<?php echo htmlspecialchars($course->getMediaPath()); ?>" type="video/mp4"> Your browser does not support the video tag. </video> <?php elseif ($course->getContentType() === 'file' || $course->getContentType() === 'document'): ?> <a href="<?php echo htmlspecialchars($course->getMediaPath()); ?>" target="_blank" class="block w-full bg-violet-100 text-violet-800 text-center py-3 rounded-lg mb-6"> Download Content </a> <?php else: ?> <p class="w-full bg-violet-100 text-violet-800 text-center py-3 rounded-lg mb-6"> <?php echo htmlspecialchars($course->getMediaPath()); ?> </p> <?php endif; ?> <div class="text-3xl font-bold text-slate-800 mb-6"> $<?php echo htmlspecialchars($course->getPrice()); ?> </div> <form method="POST" action="enroll.php" onsubmit="return enrollCourse(<?php echo $courseId; ?>);"> <input type="hidden" name="course_id" value="<?php echo $courseId; ?>"> <button type="submit" class="w-full bg-violet-600 text-white py-3 rounded-lg hover:bg-violet-700 transition-all mb-4"> Enroll Now </button> </form>
+<!-- Course Card - Right Side -->
+<div class="lg:col-span-1">
+  <div class="bg-slate-50 rounded-xl p-6">
+    <?php if ($course->getContentType() === 'image'): ?>
+      <img 
+        src="<?php echo htmlspecialchars($course->getMediaPath()); ?>" 
+        alt="Course Preview" 
+        class="w-full rounded-lg mb-6"
+      />
+    <?php elseif ($course->getContentType() === 'video'): ?>
+      <video controls class="w-full rounded-lg mb-6">
+        <source src="<?php echo htmlspecialchars($course->getMediaPath()); ?>" type="video/mp4">
+        Your browser does not support the video tag.
+      </video>
+    <?php elseif ($course->getContentType() === 'file' || $course->getContentType() === 'document'): ?>
+      <a href="<?php echo htmlspecialchars($course->getMediaPath()); ?>" target="_blank" class="block w-full bg-violet-100 text-violet-800 text-center py-3 rounded-lg mb-6">Download Content</a>
+    <?php else: ?>
+      <p class="w-full bg-violet-100 text-violet-800 text-center py-3 rounded-lg mb-6">
+        <?php echo htmlspecialchars($course->getMediaPath()); ?>
+      </p>
+    <?php endif; ?>
+
+    <div class="text-3xl font-bold text-slate-800 mb-6">
+      $<?php echo htmlspecialchars($course->getPrice()); ?>
+    </div>
+
+    <form method="POST" action="">
+      <input type="hidden" name="course_id" value="<?php echo $courseId; ?>">
+      <button type="submit" class="w-full bg-violet-600 text-white py-3 rounded-lg hover:bg-violet-700 transition-all mb-4">
+        Enroll Now
+      </button>
+    </form>
+  </div>
+</div>
 
             <div class="space-y-4">
               <div class="flex items-center gap-3">
@@ -112,6 +186,12 @@ $author = User::getById($course->getauthor()); // Fetch the author details
         <div class="border border-slate-200 rounded-lg p-4 cursor-pointer hover:bg-slate-50">
           Module 1: Introduction to Web Development
         </div>
+        <div class="border border-slate-200 rounded-lg p-4 cursor-pointer hover:bg-slate-50">
+          Module 2: Introduction to Java Script
+        </div>
+        <div class="border border-slate-200 rounded-lg p-4 cursor-pointer hover:bg-slate-50">
+          Module 3: Introduction to PHP
+        </div>
         <!-- Repeat for other modules -->
       </div>
     </div>
@@ -128,5 +208,9 @@ $author = User::getById($course->getauthor()); // Fetch the author details
       return true; // Submit the form
     }
   </script>
+  
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+
 </body>
 </html>
