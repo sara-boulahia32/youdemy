@@ -7,10 +7,22 @@ use Models\Category;
 $coursesPerPage = isset($_GET['coursesPerPage']) ? (int) $_GET['coursesPerPage'] : 3;
 $page = isset($_GET['page']) ? (int) $_GET['page'] : 1;
 $offset = ($page - 1) * $coursesPerPage;
+$keyword = isset($_GET['search']) ? $_GET['search'] : '';
+$categoryFilter = isset($_GET['category']) ? $_GET['category'] : '';
 
-$courses = Course::getPaginated($coursesPerPage, $offset);
-$totalCourses = Course::getTotalCourses();
-$totalPages = ceil($totalCourses / $coursesPerPage);
+if ($categoryFilter) {
+    $courses = Course::getByCategory($categoryFilter, $coursesPerPage, $offset);
+    $totalCourses = count($courses); // Assume the category filter result is already paginated
+    $totalPages = ceil($totalCourses / $coursesPerPage);
+} else if ($keyword) {
+    $courses = Course::search($keyword, '', $coursesPerPage, $offset);
+    $totalCourses = count($courses); // Assume the search result is already paginated
+    $totalPages = ceil($totalCourses / $coursesPerPage);
+} else {
+    $courses = Course::getPaginated($coursesPerPage, $offset);
+    $totalCourses = Course::getTotalCourses();
+    $totalPages = ceil($totalCourses / $coursesPerPage);
+}
 
 $categories = Category::getAll();
 ?>
@@ -49,28 +61,36 @@ $categories = Category::getAll();
     </div>
   </nav>
 
-    <!-- Search Bar -->
-    <div class="max-w-7xl mx-auto px-4 mb-12">
+   
+  <!-- Search Bar -->
+  <div class="max-w-7xl mx-auto px-4 mb-12">
     <div class="relative max-w-xl mx-auto">
       <svg xmlns="http://www.w3.org/2000/svg" class="absolute left-4 top-3.5 h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 4a6 6 0 016 6v3a6 6 0 11-12 0V10a6 6 0 016-6z" />
       </svg>
-      <input
-        type="text"
-        placeholder="Search for courses..."
-        class="w-full pl-12 pr-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-violet-600 focus:border-transparent outline-none"
-      />
+      <form method="GET" action="catalogue.php" class="w-full">
+        <input
+          type="text"
+          name="search"
+          value="<?php echo htmlspecialchars($keyword); ?>"
+          placeholder="Search for courses..."
+          class="w-full pl-12 pr-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-violet-600 focus:border-transparent outline-none"
+        />
+      </form>
     </div>
   </div>
+
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <div class="mb-4">
       <label for="coursesPerPage" class="block text-sm font-medium text-gray-700">Courses per page:</label>
-      <select id="coursesPerPage" class="mt-1 block w-1/4 pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-violet-500 focus:border-violet-500 sm:text-sm rounded-md">
-        <option value="3" <?php echo $coursesPerPage == 3 ? 'selected' : ''; ?>>3</option>
-        <option value="6" <?php echo $coursesPerPage == 6 ? 'selected' : ''; ?>>6</option>
-        <option value="9" <?php echo $coursesPerPage == 9 ? 'selected' : ''; ?>>9</option>
+      <select id="coursesPerPage" class="mt-1 block w-1/4 pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-violet-500 focus:border-violet-500 sm:text-sm rounded-md" onchange="location = this.value;">
+        <option value="?coursesPerPage=3&search=<?php echo htmlspecialchars($keyword); ?>&category=<?php echo htmlspecialchars($categoryFilter); ?>" <?php echo $coursesPerPage == 3 ? 'selected' : ''; ?>>3</option>
+        <option value="?coursesPerPage=6&search=<?php echo htmlspecialchars($keyword); ?>&category=<?php echo htmlspecialchars($categoryFilter); ?>" <?php echo $coursesPerPage == 6 ? 'selected' : ''; ?>>6</option>
+        <option value="?coursesPerPage=9&search=<?php echo htmlspecialchars($keyword); ?>&category=<?php echo htmlspecialchars($categoryFilter); ?>" <?php echo $coursesPerPage == 9 ? 'selected' : ''; ?>>9</option>
       </select>
     </div>
+
+   <!-- Category Filter --> <div class="mb-4"> <label for="categoryFilter" class="block text-sm font-medium text-gray-700">Filter by category:</label> <div class="flex flex-wrap gap-2"> <a href="catalogue.php?category=&search=<?php echo htmlspecialchars($keyword); ?>&coursesPerPage=<?php echo $coursesPerPage; ?>" class="px-3 py-1 bg-violet-50 text-violet-600 rounded-full text-sm"> All </a> <?php while ($category = $categories->fetch(PDO::FETCH_ASSOC)): ?> <a href="catalogue.php?category=<?php echo $category['id_category']; ?>&search=<?php echo htmlspecialchars($keyword); ?>&coursesPerPage=<?php echo $coursesPerPage; ?>" class="px-3 py-1 bg-violet-50 text-violet-600 rounded-full text-sm <?php echo $categoryFilter == $category['id_category'] ? 'bg-violet-600 text-white' : ''; ?>"> <?php echo htmlspecialchars($category['name']); ?> </a> <?php endwhile; ?> </div> </div>
 
     <div id="coursesContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
       <?php foreach ($courses as $course): ?>
@@ -338,3 +358,8 @@ document.getElementById('content_type').addEventListener('change', function() {
     }
 });
 </script>
+
+
+</body>
+</html>
+  

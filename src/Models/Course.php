@@ -55,6 +55,67 @@ class Course {
         return $db->query("SELECT COUNT(*) FROM Courses")->fetchColumn();
     }
 
+    public static function getByCategory($category, $limit, $offset) {
+        $db = Database::getInstance()->getConnection();
+        $stmt = $db->prepare("SELECT * FROM Courses WHERE category = :category LIMIT :limit OFFSET :offset");
+        $stmt->bindValue(':category', $category, PDO::PARAM_INT);
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+        $stmt->execute();
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $courses = [];
+        foreach ($rows as $row) {
+            $courses[] = new self(
+                $row['id_course'],
+                $row['title'],
+                $row['description'],
+                $row['category'],
+                $row['price'],
+                $row['status'],
+                $row['media_path'],
+                $row['is_approved']
+            );
+        }
+
+        return $courses;
+    }
+    public static function search($keyword, $limit, $offset) {
+        $db = Database::getInstance()->getConnection();
+        $stmt = $db->prepare("
+            SELECT DISTINCT Courses.* FROM Courses
+            LEFT JOIN Course_Tags ON Courses.id_course = Course_Tags.id_course
+            LEFT JOIN Tags ON Course_Tags.id_tags = Tags.id_tags
+            LEFT JOIN Categories ON Courses.category = Categories.id_category
+            WHERE Courses.title LIKE :keyword 
+               OR Courses.description LIKE :keyword 
+               OR Categories.name LIKE :keyword
+               OR Tags.name LIKE :keyword
+            LIMIT :limit OFFSET :offset
+        ");
+        $stmt->bindValue(':keyword', '%' . $keyword . '%', PDO::PARAM_STR);
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+        $stmt->execute();
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $courses = [];
+        foreach ($rows as $row) {
+            $courses[] = new self(
+                $row['id_course'],
+                $row['title'],
+                $row['description'],
+                $row['category'],
+                $row['price'],
+                $row['status'],
+                $row['media_path'],
+                $row['is_approved']
+            );
+        }
+
+        return $courses;
+    }
+
     public function getTags() {
         $db = Database::getInstance()->getConnection();
         $stmt = $db->prepare("SELECT Tags.id_tags, Tags.name FROM Tags INNER JOIN Course_Tags ON Tags.id_tags = Course_Tags.id_tags WHERE Course_Tags.id_course = ?");
@@ -65,6 +126,25 @@ class Course {
         }
         return $tags;
     }
+    public static function getById($id) {
+        $db = Database::getInstance()->getConnection();
+        $stmt = $db->prepare("SELECT * FROM Courses WHERE id_course = :id");
+        $stmt->bindValue(':id', $id, PDO::PARAM_INT);
+        $stmt->execute();
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+        return $row ? new self(
+            $row['id_course'],
+            $row['title'],
+            $row['description'],
+            $row['category'],
+            $row['price'],
+            $row['status'],
+            $row['media_path'],
+            $row['is_approved']
+        ) : null;
+    }
+    
 
     public function getTitle() {
         return $this->title;
@@ -94,6 +174,7 @@ class Course {
         return $this->is_approved;
     }
 }
+
 
 
 ?>
