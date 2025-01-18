@@ -1,5 +1,4 @@
 <?php
-
 namespace Models;
 
 use Database\Database;
@@ -99,27 +98,22 @@ class User {
     }
 
     // Get user by ID
-    public function getUserById($id) {
+    public static function getById($id) {
         $db = Database::getInstance()->getConnection();
-
-        // Prepare the SQL query
-        $stmt = $db->prepare("SELECT * FROM users WHERE id = :id");
+        $stmt = $db->prepare("SELECT * FROM Users WHERE id_user = :id");
         $stmt->bindParam(':id', $id, PDO::PARAM_INT);
         $stmt->execute();
-
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
-
         if ($result) {
-            return new User(
-                $result['id'],
+            return new self(
+                $result['id_user'],
                 $result['name'],
                 $result['email'],
                 $result['password'],
-                $result['role'], 
+                $result['role'],
                 $result['is_active']
             );
         }
-
         return null; // User not found
     }
 

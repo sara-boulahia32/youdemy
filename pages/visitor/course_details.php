@@ -1,8 +1,8 @@
 <?php
 require_once __DIR__ . '/../../src/config/autoloader.php';
 use Models\Course;
-use Models\Category;
-use Models\Instructor;
+use Models\User; // Ensure this model is included
+use Models\category; // Ensure this model is included
 
 session_start(); // Ensure session is started to check user role
 
@@ -13,8 +13,9 @@ if (!$course) {
 }
 $tags = $course->getTags();
 $category = Category::getById($course->getCategory());
-$instructor = Instructor::getById($course->getInstructorId());
-
+$author = User::getById($course->getauthor()); // Fetch the author details
+echo '<pre>'; var_dump($course); echo '</pre>';
+echo '<pre>'; var_dump($authorId); echo '</pre>';echo '<pre>'; var_dump($author); echo '</pre>';
 ?>
 
 <!DOCTYPE html>
@@ -27,6 +28,7 @@ $instructor = Instructor::getById($course->getInstructorId());
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body class="min-h-screen bg-slate-50">
+    
 
   <main class="max-w-7xl mx-auto px-4 py-12">
     <!-- Course Header -->
@@ -35,7 +37,7 @@ $instructor = Instructor::getById($course->getInstructorId());
         <!-- Main Content - Left Side -->
         <div class="lg:col-span-2">
           <div class="flex gap-3 mb-6">
-            <?php foreach ($tags as $tag): ?>
+            <?php foreach ($course->getTags() as $tag):  ?>
                 <span class="px-4 py-1 bg-violet-50 text-violet-600 rounded-full text-sm"><?php echo htmlspecialchars($tag->getName()); ?></span>
             <?php endforeach; ?>
           </div>
@@ -64,15 +66,17 @@ $instructor = Instructor::getById($course->getInstructorId());
             </div>
           </div>
 
-          <!-- Instructor Info -->
+          <!-- Author Info -->
           <div class="flex items-center gap-4 mb-8">
-            <img src="https://via.placeholder.com/48" alt="Instructor" class="w-12 h-12 rounded-full">
+            <img src="https://via.placeholder.com/48" alt="Author" class="w-12 h-12 rounded-full">
             <div>
-              <h3 class="font-medium text-slate-800"><?php echo htmlspecialchars($instructor->getName()); ?></h3>
-              <p class="text-sm text-slate-600"><?php echo htmlspecialchars($instructor->getTitle()); ?></p>
+              <h3 class="font-medium text-slate-800"><?php echo htmlspecialchars($author->getName()); ?></h3>
+              
+              <p class="text-sm text-slate-600"><?php echo htmlspecialchars($author->getEmail()); ?></p>
             </div>
           </div>
         </div>
+
 
         <!-- Course Card - Right Side -->
         <div class="lg:col-span-1">

@@ -13,8 +13,9 @@ class Course {
     private $status;
     private $media_path;
     private $is_approved;
+    private $id_author;
 
-    public function __construct($id, $title, $description, $category, $price, $status, $media_path, $is_approved) {
+    public function __construct($id, $title, $description, $category, $price, $status, $media_path, $is_approved, $id_author) {
         $this->id = $id;
         $this->title = $title;
         $this->description = $description;
@@ -23,6 +24,7 @@ class Course {
         $this->status = $status;
         $this->media_path = $media_path;
         $this->is_approved = $is_approved;
+        $this->id_author = $id_author;
     }
 
     public static function getPaginated($limit, $offset) {
@@ -43,7 +45,8 @@ class Course {
                 $row['price'],
                 $row['status'],
                 $row['media_path'],
-                $row['is_approved']
+                $row['is_approved'],
+                $row['id_author']
             );
         }
 
@@ -74,7 +77,8 @@ class Course {
                 $row['price'],
                 $row['status'],
                 $row['media_path'],
-                $row['is_approved']
+                $row['is_approved'],
+                $row['id_author']
             );
         }
 
@@ -109,7 +113,8 @@ class Course {
                 $row['price'],
                 $row['status'],
                 $row['media_path'],
-                $row['is_approved']
+                $row['is_approved'],
+                $row['id_author']
             );
         }
 
@@ -141,13 +146,17 @@ class Course {
             $row['price'],
             $row['status'],
             $row['media_path'],
-            $row['is_approved']
+            $row['is_approved'],
+            $row['id_author']
         ) : null;
     }
     
 
     public function getTitle() {
         return $this->title;
+    }
+    public function getid() {
+        return $this->id;
     }
 
     public function getDescription() {
@@ -172,6 +181,9 @@ class Course {
 
     public function isApproved() {
         return $this->is_approved;
+    }
+    public function getauthor() {
+        return $this->id_author;
     }
 }
 

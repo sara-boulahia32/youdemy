@@ -142,7 +142,7 @@ $categories = Category::getAll();
               <img src="../../public/assets/img/Free Vector _ Hand drawn bookstore landing page template.jpeg" alt="Instructor" class="w-8 h-8 rounded-full">
               <span class="text-sm text-slate-600">Sarah Johnson</span>
             </div>
-            <button class="px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors">Enroll Now</button>
+            <!-- Buttons --> <div class="flex justify-between"> <a href="course_details.php?id=<?php echo $course->getid(); ?>" class="bg-transparent border-2 border-violet-600 text-violet-600 px-4 py-2 rounded-md hover:bg-violet-600 hover:text-white transition-all"> See Details </a> <form method="POST" action="catalogue.php" onsubmit="return enrollCourse(<?php echo $course->getId(); ?>);"> <input type="hidden" name="course_id" value="<?php echo $course->getid(); ?>"> <button type="submit" class="bg-violet-600 text-white px-4 py-2 rounded-md hover:bg-violet-700 transition-all"> Enroll Now </button> </form> </div>
           </div>
         </div>
       </div>
@@ -358,7 +358,10 @@ document.getElementById('content_type').addEventListener('change', function() {
     }
 });
 </script>
-
+<script> 
+function enrollCourse(courseId){ 
+  Swal.fire({ title: 'Success!', text: 'You have been successfully enrolled in the course.', icon: 'success', confirmButtonText: 'OK' }); return true; // Submit the form 
+  } </script>
 
 </body>
 </html>
