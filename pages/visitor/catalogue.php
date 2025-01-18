@@ -1,10 +1,18 @@
 <?php
 require_once __DIR__ . '/../../src/config/autoloader.php';
 
-use Models\Tag;
 use Models\Course;
-$tags = Tag::getAll(); // Adjust if necessary
-$courses = Course::getAll();
+use Models\Category;
+
+$coursesPerPage = isset($_GET['coursesPerPage']) ? (int) $_GET['coursesPerPage'] : 3;
+$page = isset($_GET['page']) ? (int) $_GET['page'] : 1;
+$offset = ($page - 1) * $coursesPerPage;
+
+$courses = Course::getPaginated($coursesPerPage, $offset);
+$totalCourses = Course::getTotalCourses();
+$totalPages = ceil($totalCourses / $coursesPerPage);
+
+$categories = Category::getAll();
 ?>
 
 <!DOCTYPE html>
@@ -16,10 +24,6 @@ $courses = Course::getAll();
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
-
-
-
-
 </head>
 <body class="font-inter bg-slate-50">
   
@@ -58,36 +62,43 @@ $courses = Course::getAll();
       />
     </div>
   </div>
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="mb-4">
+      <label for="coursesPerPage" class="block text-sm font-medium text-gray-700">Courses per page:</label>
+      <select id="coursesPerPage" class="mt-1 block w-1/4 pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-violet-500 focus:border-violet-500 sm:text-sm rounded-md">
+        <option value="3" <?php echo $coursesPerPage == 3 ? 'selected' : ''; ?>>3</option>
+        <option value="6" <?php echo $coursesPerPage == 6 ? 'selected' : ''; ?>>6</option>
+        <option value="9" <?php echo $coursesPerPage == 9 ? 'selected' : ''; ?>>9</option>
+      </select>
+    </div>
 
-<!-- Courses Section -->
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-    <?php foreach ($courses as $course): ?>
-      <div class="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300">
-        <!-- Course Image -->
-        <?php if ($course->getMediaPath()): ?>
-          <div class="relative">
-            <img src="<?php echo htmlspecialchars($course->getMediaPath()); ?>" alt="<?php echo htmlspecialchars($course->getTitle()); ?>" class="w-full h-48 object-cover rounded-t-2xl">
-            <div class="absolute top-4 right-4 bg-white px-3 py-1 rounded-full text-sm font-medium text-violet-600">
-              $<?php echo htmlspecialchars($course->getPrice()); ?>
+    <div id="coursesContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+      <?php foreach ($courses as $course): ?>
+        <div class="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300">
+          <!-- Course Image -->
+          <?php if ($course->getMediaPath()): ?>
+            <div class="relative">
+              <img src="<?php echo htmlspecialchars($course->getMediaPath() ?? ''); ?>" alt="<?php echo htmlspecialchars($course->getTitle() ?? ''); ?>" class="w-full h-48 object-cover rounded-t-2xl">
+              <div class="absolute top-4 right-4 bg-white px-3 py-1 rounded-full text-sm font-medium text-violet-600">
+                $<?php echo htmlspecialchars($course->getPrice() ?? ''); ?>
+              </div>
             </div>
-          </div>
-        <?php endif; ?>
+          <?php endif; ?>
 
-        <!-- Course Content -->
-        <div class="p-6">
-          <!-- Tags -->
-          <div class="flex flex-wrap gap-2 mb-4">
-            <?php foreach ($course->getTags() as $tag): ?>
-              <span class="px-3 py-1 bg-violet-50 text-violet-600 rounded-full text-sm">
-                <?php echo htmlspecialchars($tag->getName()); ?>
-              </span>
-            <?php endforeach; ?>
-          </div>
+          <!-- Course Content -->
+          <div class="p-6">
+            <!-- Tags -->
+            <div class="flex flex-wrap gap-2 mb-4">
+              <?php foreach ($course->getTags() as $tag): ?>
+                <span class="px-3 py-1 bg-violet-50 text-violet-600 rounded-full text-sm">
+                  <?php echo htmlspecialchars($tag->getName() ?? ''); ?>
+                </span>
+              <?php endforeach; ?>
+            </div>
 
-          <!-- Title & Description -->
-          <h3 class="text-xl font-semibold text-slate-800 mb-2"><?php echo htmlspecialchars($course->getTitle()); ?></h3>
-          <p class="text-slate-600 text-sm mb-4"><?php echo htmlspecialchars(substr($course->getDescription(), 0, 100)); ?>...</p>
+            <!-- Title & Description -->
+            <h3 class="text-xl font-semibold text-slate-800 mb-2"><?php echo htmlspecialchars($course->getTitle() ?? ''); ?></h3>
+            <p class="text-slate-600 text-sm mb-4"><?php echo htmlspecialchars(substr($course->getDescription() ?? '', 0, 100)); ?>...</p>
 
           <!-- Stats -->
           <div class="flex items-center gap-4 text-sm text-slate-600 mb-4">
@@ -117,6 +128,8 @@ $courses = Course::getAll();
       </div>
     <?php endforeach; ?>
   </div>
+  <div class="mt-8"> 
+    <?php if ($totalPages > 1): ?> <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination"> <?php for ($i = 1; $i <= $totalPages; $i++): ?> <a href="?page=<?php echo $i; ?>&coursesPerPage=<?php echo $coursesPerPage; ?>" class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"> <?php echo $i; ?> </a> <?php endfor; ?> </nav> <?php endif; ?> </div>
 </div>
 
   <!-- Teacher's Add Course Button -->
@@ -150,18 +163,37 @@ $courses = Course::getAll();
         <textarea id="description" name="description" rows="4" class="w-full px-4 py-2 border border-slate-200 rounded-lg mt-2 focus:outline-none focus:ring-2 focus:ring-violet-600" required></textarea>
     </div>
     <div class="mb-4">
-        <label for="content" class="block text-slate-800">Contenu (Vidéo ou Document)</label>
-        <input type="file" id="content" name="content" class="w-full px-4 py-2 border border-slate-200 rounded-lg mt-2 focus:outline-none focus:ring-2 focus:ring-violet-600">
+        <label for="category" class="block text-slate-800">Catégorie</label>
+        <select id="category" name="category" class="w-full px-4 py-2 border border-slate-200 rounded-lg mt-2 focus:outline-none focus:ring-2 focus:ring-violet-600" required>
+            <?php 
+
+                if($categories != null && $categories->rowCount() > 0){
+                  foreach($categories as $item){
+                    echo '<option value="'.$item['id_category'].'">'.$item['name'].'</option>';
+                  }
+                }
+
+            ?>
+            
+        </select>
+        
     </div>
     <div class="mb-4">
-        <label for="category" class="block text-slate-800">Catégorie</label>
-        <input type="text" id="category" name="category" class="w-full px-4 py-2 border border-slate-200 rounded-lg mt-2 focus:outline-none focus:ring-2 focus:ring-violet-600" required>
+        <label for="content_type" class="block text-slate-800">Type de Contenu</label>
+        <select id="content_type" name="content_type" class="w-full px-4 py-2 border border-slate-200 rounded-lg mt-2 focus:outline-none focus:ring-2 focus:ring-violet-600" required>
+            <option value="text">Texte</option>
+            <option value="video">Vidéo</option>
+            <option value="file">Fichier</option>
+            <option value="image">Image</option>
+        </select>
+    </div>
+    <div class="mb-4" id="content-upload">
+        <!-- Content upload field will be dynamically updated based on content type -->
     </div>
     <div class="mb-4">
         <label for="price" class="block text-slate-800">Prix</label>
         <input type="number" id="price" name="price" class="w-full px-4 py-2 border border-slate-200 rounded-lg mt-2 focus:outline-none focus:ring-2 focus:ring-violet-600" required>
     </div>
-    
     <div class="mb-4">
         <label for="tags" class="block text-slate-800">Tags</label>
         <input type="text" id="tags" name="tags" class="w-full px-4 py-2 border border-slate-200 rounded-lg mt-2 focus:outline-none focus:ring-2 focus:ring-violet-600">
@@ -289,5 +321,20 @@ $courses = Course::getAll();
 
   });
 </script>
-</body>
-</html>
+<script>
+document.getElementById('content_type').addEventListener('change', function() {
+    const contentType = this.value;
+    const contentUpload = document.getElementById('content-upload');
+    contentUpload.innerHTML = '';
+
+    if (contentType === 'video') {
+        contentUpload.innerHTML = '<label for="content" class="block text-slate-800">Vidéo</label><input type="file" id="content" name="content" accept="video/*" class="w-full px-4 py-2 border border-slate-200 rounded-lg mt-2 focus:outline-none focus:ring-2 focus:ring-violet-600">';
+    } else if (contentType === 'file') {
+        contentUpload.innerHTML = '<label for="content" class="block text-slate-800">Fichier</label><input type="file" id="content" name="content" accept=".pdf,.doc,.docx" class="w-full px-4 py-2 border border-slate-200 rounded-lg mt-2 focus:outline-none focus:ring-2 focus:ring-violet-600">';
+    } else if (contentType === 'image') {
+        contentUpload.innerHTML = '<label for="content" class="block text-slate-800">Image</label><input type="file" id="content" name="content" accept="image/*" class="w-full px-4 py-2 border border-slate-200 rounded-lg mt-2 focus:outline-none focus:ring-2 focus:ring-violet-600">';
+    } else if (contentType === 'text') {
+        contentUpload.innerHTML = '<label for="content" class="block text-slate-800">Texte</label><textarea id="content" name="content" rows="4" class="w-full px-4 py-2 border border-slate-200 rounded-lg mt-2 focus:outline-none focus:ring-2 focus:ring-violet-600"></textarea>';
+    }
+});
+</script>
