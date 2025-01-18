@@ -14,8 +14,7 @@ if (!$course) {
 $tags = $course->getTags();
 $category = Category::getById($course->getCategory());
 $author = User::getById($course->getauthor()); // Fetch the author details
-echo '<pre>'; var_dump($course); echo '</pre>';
-echo '<pre>'; var_dump($authorId); echo '</pre>';echo '<pre>'; var_dump($author); echo '</pre>';
+
 ?>
 
 <!DOCTYPE html>
@@ -75,30 +74,11 @@ echo '<pre>'; var_dump($authorId); echo '</pre>';echo '<pre>'; var_dump($author)
               <p class="text-sm text-slate-600"><?php echo htmlspecialchars($author->getEmail()); ?></p>
             </div>
           </div>
+          <!-- Category Info --> <div class="flex items-center gap-4 mb-8"> <span class="text-slate-600 text-sm">Category: <?php echo htmlspecialchars($category->getName()); ?></span> </div> </div>
         </div>
 
 
-        <!-- Course Card - Right Side -->
-        <div class="lg:col-span-1">
-          <div class="bg-slate-50 rounded-xl p-6">
-            <img 
-              src="<?php echo htmlspecialchars($course->getMediaPath()); ?>" 
-              alt="Course Preview" 
-              class="w-full rounded-lg mb-6"
-            />
-            
-            <div class="text-3xl font-bold text-slate-800 mb-6">
-              $<?php echo htmlspecialchars($course->getPrice()); ?>
-            </div>
-
-            <?php if (isset($_SESSION['role']) && $_SESSION['role'] == 'student'): ?>
-              <form method="POST" action="enroll.php" onsubmit="return enrollCourse(<?php echo $courseId; ?>);">
-                <input type="hidden" name="course_id" value="<?php echo $courseId; ?>">
-                <button type="submit" class="w-full bg-violet-600 text-white py-3 rounded-lg hover:bg-violet-700 transition-all mb-4">
-                  Enroll Now
-                </button>
-              </form>
-            <?php endif; ?>
+        <!-- Course Card - Right Side --> <div class="lg:col-span-1"> <div class="bg-slate-50 rounded-xl p-6"> <?php if ($course->getContentType() === 'image'): ?> <img src="<?php echo htmlspecialchars($course->getMediaPath()); ?>" alt="Course Preview" class="w-full rounded-lg mb-6" /> <?php elseif ($course->getContentType() === 'video'): ?> <video controls class="w-full rounded-lg mb-6"> <source src="<?php echo htmlspecialchars($course->getMediaPath()); ?>" type="video/mp4"> Your browser does not support the video tag. </video> <?php elseif ($course->getContentType() === 'file' || $course->getContentType() === 'document'): ?> <a href="<?php echo htmlspecialchars($course->getMediaPath()); ?>" target="_blank" class="block w-full bg-violet-100 text-violet-800 text-center py-3 rounded-lg mb-6"> Download Content </a> <?php else: ?> <p class="w-full bg-violet-100 text-violet-800 text-center py-3 rounded-lg mb-6"> <?php echo htmlspecialchars($course->getMediaPath()); ?> </p> <?php endif; ?> <div class="text-3xl font-bold text-slate-800 mb-6"> $<?php echo htmlspecialchars($course->getPrice()); ?> </div> <form method="POST" action="enroll.php" onsubmit="return enrollCourse(<?php echo $courseId; ?>);"> <input type="hidden" name="course_id" value="<?php echo $courseId; ?>"> <button type="submit" class="w-full bg-violet-600 text-white py-3 rounded-lg hover:bg-violet-700 transition-all mb-4"> Enroll Now </button> </form>
 
             <div class="space-y-4">
               <div class="flex items-center gap-3">

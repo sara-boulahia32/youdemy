@@ -14,8 +14,9 @@ class Course {
     private $media_path;
     private $is_approved;
     private $id_author;
+    private $content_type;
 
-    public function __construct($id, $title, $description, $category, $price, $status, $media_path, $is_approved, $id_author) {
+    public function __construct($id, $title, $description, $category, $price, $status, $media_path, $is_approved, $id_author, $content_type) {
         $this->id = $id;
         $this->title = $title;
         $this->description = $description;
@@ -25,6 +26,7 @@ class Course {
         $this->media_path = $media_path;
         $this->is_approved = $is_approved;
         $this->id_author = $id_author;
+        $this->content_type = $content_type;
     }
 
     public static function getPaginated($limit, $offset) {
@@ -46,7 +48,8 @@ class Course {
                 $row['status'],
                 $row['media_path'],
                 $row['is_approved'],
-                $row['id_author']
+                $row['id_author'],
+                $row['content_type']
             );
         }
 
@@ -78,7 +81,9 @@ class Course {
                 $row['status'],
                 $row['media_path'],
                 $row['is_approved'],
-                $row['id_author']
+                $row['id_author'],
+                $row['content_type']
+
             );
         }
 
@@ -114,7 +119,9 @@ class Course {
                 $row['status'],
                 $row['media_path'],
                 $row['is_approved'],
-                $row['id_author']
+                $row['id_author'],
+                $row['content_type']
+
             );
         }
 
@@ -147,7 +154,10 @@ class Course {
             $row['status'],
             $row['media_path'],
             $row['is_approved'],
-            $row['id_author']
+            $row['id_author'],
+            $row['content_type']
+
+
         ) : null;
     }
     
@@ -185,6 +195,8 @@ class Course {
     public function getauthor() {
         return $this->id_author;
     }
+    public function getContentType() { // Your logic here to get the content type 
+        return $this->content_type;; }
 }
 
 

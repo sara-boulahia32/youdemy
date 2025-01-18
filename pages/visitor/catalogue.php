@@ -25,6 +25,7 @@ if ($categoryFilter) {
 }
 
 $categories = Category::getAll();
+
 ?>
 
 <!DOCTYPE html>
@@ -90,8 +91,7 @@ $categories = Category::getAll();
       </select>
     </div>
 
-   <!-- Category Filter --> <div class="mb-4"> <label for="categoryFilter" class="block text-sm font-medium text-gray-700">Filter by category:</label> <div class="flex flex-wrap gap-2"> <a href="catalogue.php?category=&search=<?php echo htmlspecialchars($keyword); ?>&coursesPerPage=<?php echo $coursesPerPage; ?>" class="px-3 py-1 bg-violet-50 text-violet-600 rounded-full text-sm"> All </a> <?php while ($category = $categories->fetch(PDO::FETCH_ASSOC)): ?> <a href="catalogue.php?category=<?php echo $category['id_category']; ?>&search=<?php echo htmlspecialchars($keyword); ?>&coursesPerPage=<?php echo $coursesPerPage; ?>" class="px-3 py-1 bg-violet-50 text-violet-600 rounded-full text-sm <?php echo $categoryFilter == $category['id_category'] ? 'bg-violet-600 text-white' : ''; ?>"> <?php echo htmlspecialchars($category['name']); ?> </a> <?php endwhile; ?> </div> </div>
-
+   <!-- Category Filter --> <div class="mb-4"> <label for="categoryFilter" class="block text-sm font-medium text-gray-700">Filter by category:</label> <div class="flex flex-wrap gap-2"> <a href="catalogue.php?category=&search=<?php echo htmlspecialchars($keyword); ?>&coursesPerPage=<?php echo $coursesPerPage; ?>" class="px-3 py-1 bg-violet-50 text-violet-600 rounded-full text-sm"> All </a> <?php foreach ($categories as $category): ?> <a href="catalogue.php?category=<?php echo $category->getId(); ?>&search=<?php echo htmlspecialchars($keyword); ?>&coursesPerPage=<?php echo $coursesPerPage; ?>" class="px-3 py-1 bg-violet-50 text-violet-600 rounded-full text-sm <?php echo $categoryFilter == $category->getId() ? 'bg-violet-600 text-white' : ''; ?>"> <?php echo htmlspecialchars($category->getName()); ?> </a> <?php endforeach; ?> </div> </div>
     <div id="coursesContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
       <?php foreach ($courses as $course): ?>
         <div class="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300">
@@ -184,18 +184,7 @@ $categories = Category::getAll();
     </div>
     <div class="mb-4">
         <label for="category" class="block text-slate-800">Catégorie</label>
-        <select id="category" name="category" class="w-full px-4 py-2 border border-slate-200 rounded-lg mt-2 focus:outline-none focus:ring-2 focus:ring-violet-600" required>
-            <?php 
-
-                if($categories != null && $categories->rowCount() > 0){
-                  foreach($categories as $item){
-                    echo '<option value="'.$item['id_category'].'">'.$item['name'].'</option>';
-                  }
-                }
-
-            ?>
-            
-        </select>
+        <select id="category" name="category" class="w-full px-4 py-2 border border-slate-200 rounded-lg mt-2 focus:outline-none focus:ring-2 focus:ring-violet-600" required> <?php if ($categories) { foreach ($categories as $category) { echo '<option value="' . htmlspecialchars($category->getId()) . '">' . htmlspecialchars($category->getName()) . '</option>'; } } ?> </select>
         
     </div>
     <div class="mb-4">

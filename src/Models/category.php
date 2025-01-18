@@ -17,22 +17,25 @@ class Category {
         $db = Database::getInstance()->getConnection();
         $stmt = $db->prepare("SELECT * FROM Categories");
         $stmt->execute();
-        if($stmt->execute()){
-            return $stmt;
-        }else{
-            return null;
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $categories = [];
+        foreach ($rows as $row) {
+            $categories[] = new self($row['id_category'], $row['name']);
         }
+
+        return $categories;
     }
+
     public static function getById($id) {
         $db = Database::getInstance()->getConnection();
         $stmt = $db->prepare("SELECT * FROM Categories WHERE id_category = :id");
         $stmt->bindValue(':id', $id, PDO::PARAM_INT);
         $stmt->execute();
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
-    
+
         return $row ? new self($row['id_category'], $row['name']) : null;
     }
-    
 
     public function getId() {
         return $this->id;
