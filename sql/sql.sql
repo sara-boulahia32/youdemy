@@ -12,6 +12,7 @@ CREATE TABLE Users (
 -- Create Courses table
 CREATE TABLE Courses (
     id_course INT AUTO_INCREMENT PRIMARY KEY,
+    id_author INT ,
     title VARCHAR(255) NOT NULL,
     content TEXT NOT NULL,
     category VARCHAR(255) NOT NULL,
@@ -20,6 +21,7 @@ CREATE TABLE Courses (
     status ENUM('Draft', 'Published') NOT NULL,
     media_path VARCHAR(255), -- For media files (video, image, document)
     is_approved BOOLEAN NOT NULL DEFAULT FALSE -- For course approval by admin
+    content_type ENUM('text', 'video', 'file', 'image');
 );
 
 -- Create Tags table

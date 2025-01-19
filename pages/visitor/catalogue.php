@@ -6,7 +6,8 @@ use Models\Category;
 use Database\Database;
 
 session_start(); // Start session to access logged-in user
-
+$showSuccessAlert = false; 
+$showErrorAlert = false;
 // Handle the enrollment logic
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['course_id'])) {
     try {
@@ -27,24 +28,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['course_id'])) {
         $stmt->execute([$user_id, $course_id, $start_date, $end_date]);
 
         // Show success alert using SweetAlert
-        echo "<script>
-                Swal.fire({
-                  title: 'Success!',
-                  text: 'You have been successfully enrolled in the course.',
-                  icon: 'success',
-                  confirmButtonText: 'OK'
-                });
-              </script>";
+        $showSuccessAlert = true; 
+
     } catch (Exception $e) {
         // Show error alert using SweetAlert
-        echo "<script>
-                Swal.fire({
-                  title: 'Error!',
-                  text: 'There was an error enrolling in the course.',
-                  icon: 'error',
-                  confirmButtonText: 'OK'
-                });
-              </script>";
+        $showErrorAlert = true; 
+
     }
 }
 
@@ -413,7 +402,27 @@ function enrollCourse(courseId) {
   return true; // Submit the form
 }
 </script>
+
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+<?php if ($showSuccessAlert): ?>
+  Swal.fire({
+    title: 'Success!',
+    text: 'You have been successfully enrolled in the course.',
+    icon: 'success',
+    confirmButtonText: 'OK'
+  });
+<?php elseif ($showErrorAlert): ?>
+  Swal.fire({
+    title: 'Error!',
+    text: 'There was an error enrolling in the course.',
+    icon: 'error',
+    confirmButtonText: 'OK'
+  });
+<?php endif; ?>
+</script>
+
+
 
 </body>
 </html>

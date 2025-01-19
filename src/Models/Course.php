@@ -160,6 +160,55 @@ class Course {
 
         ) : null;
     }
+    public function getEnrollments() { $db = Database::getInstance()->getConnection(); $stmt = $db->prepare("SELECT * FROM Reservations WHERE id_course = ?"); $stmt->execute([$this->id]); return $stmt->fetchAll(PDO::FETCH_ASSOC); }
+    public static function getByAuthor($author_id) {
+        $db = Database::getInstance()->getConnection();
+        $stmt = $db->prepare("SELECT * FROM Courses WHERE id_author = :author_id");
+        $stmt->bindValue(':author_id', $author_id, PDO::PARAM_INT);
+        $stmt->execute();
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $courses = [];
+        foreach ($rows as $row) {
+            $courses[] = new self(
+                $row['id_course'],
+                $row['title'],
+                $row['description'],
+                $row['category'],
+                $row['price'],
+                $row['status'],
+                $row['media_path'],
+                $row['is_approved'],
+                $row['id_author'],
+                $row['content_type']
+            );
+        }
+
+        return $courses;
+    }
+
+    public static function deleteById($id) {
+        $db = Database::getInstance()->getConnection();
+        $stmt = $db->prepare("DELETE FROM Courses WHERE id_course = :id");
+        $stmt->bindValue(':id', $id, PDO::PARAM_INT);
+        return $stmt->execute();
+    }
+
+    public static function update($id, $title, $description, $category, $price, $status, $media_path, $is_approved, $content_type) {
+        $db = Database::getInstance()->getConnection();
+        $stmt = $db->prepare("UPDATE Courses SET title = :title, description = :description, category = :category, price = :price, status = :status, media_path = :media_path, is_approved = :is_approved, content_type = :content_type WHERE id_course = :id");
+        $stmt->bindValue(':id', $id, PDO::PARAM_INT);
+        $stmt->bindValue(':title', $title, PDO::PARAM_STR);
+        $stmt->bindValue(':description', $description, PDO::PARAM_STR);
+        $stmt->bindValue(':category', $category, PDO::PARAM_STR);
+        $stmt->bindValue(':price', $price, PDO::PARAM_STR);
+        $stmt->bindValue(':status', $status, PDO::PARAM_STR);
+        $stmt->bindValue(':media_path', $media_path, PDO::PARAM_STR);
+        $stmt->bindValue(':is_approved', $is_approved, PDO::PARAM_INT);
+        $stmt->bindValue(':content_type', $content_type, PDO::PARAM_STR);
+        return $stmt->execute();
+    }
+
     
 
     public function getTitle() {
