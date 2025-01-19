@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../../src/config/autoloader.php';
 
 use Models\Course;
+use Database\database;
 
 
 session_start(); // Ensure session is started to check user role
@@ -15,29 +16,82 @@ session_start(); // Ensure session is started to check user role
 $teacher_id = $_SESSION['user_id'];
 
 // Handle delete course request
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['delete_course_id'])) {
-    $course_id = $_POST['delete_course_id'];
-    Course::deleteById($course_id);
-    // Success alert will be triggered by JavaScript
-}
-
-// Handle add/edit course request
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_course'])) {
-    $course_id = $_POST['course_id'];
-    $title = $_POST['title'];
-    $description = $_POST['description'];
-    $category = $_POST['category'];
-    $price = $_POST['price'];
-    $status = $_POST['status'];
-    $media_path = $_POST['media_path'];
-    $content_type = $_POST['content_type'];
-    $is_approved = isset($_POST['is_approved']) ? 1 : 0;
+    try {
+        // Debug logging
+        error_log("POST data: " . print_r($_POST, true));
+        error_log("FILES data: " . print_r($_FILES, true));
 
-    if ($course_id) {
-        // Update course
-        Course::update($course_id, $title, $description, $category, $price, $status, $media_path, $is_approved, $content_type);
-    } 
-    // Success alert will be triggered by JavaScript
+        $course_id = $_POST['course_id'] ?? null;
+        $title = $_POST['title'] ?? '';
+        $description = $_POST['description'] ?? '';
+        $category = $_POST['category'] ?? '';  // Make sure this matches your form field
+        $price = $_POST['price'] ?? 0;
+        $status = $_POST['status'] ?? '';
+        $content_type = $_POST['content_type'] ?? '';
+        $is_approved = isset($_POST['is_approved']) ? 1 : 0;
+        
+        // Handle file upload
+        $media_path = null;
+        if (isset($_FILES['media_path']) && $_FILES['media_path']['error'] == UPLOAD_ERR_OK) {
+            // Create upload directory if it doesn't exist
+            $upload_dir = __DIR__ . '/../../public/uploads/courses/';
+            if (!file_exists($upload_dir)) {
+                mkdir($upload_dir, 0777, true);
+            }
+            
+            $file_extension = pathinfo($_FILES['media_path']['name'], PATHINFO_EXTENSION);
+            $file_name = uniqid('course_') . '.' . $file_extension;
+            $uploaded_file = $upload_dir . $file_name;
+            
+            if (move_uploaded_file($_FILES['media_path']['tmp_name'], $uploaded_file)) {
+                $media_path = '/uploads/courses/' . $file_name; // Store relative path in database
+            } else {
+                throw new Exception("Failed to upload file: " . error_get_last()['message']);
+            }
+        }
+        
+        // If no new file was uploaded and updating existing course, keep old media path
+        if ($media_path === null && $course_id) {
+            $existing_course = Course::getById($course_id);
+            if ($existing_course) {
+                $media_path = $existing_course->getMediaPath();
+            }
+        }
+
+        // Validate required fields
+        if (empty($category)) {
+            throw new Exception("Category is required");
+        }
+        $valid_content_types = ['video', 'file', 'image', 'text'];
+        $content_type = strtolower($_POST['content_type'] ?? '');
+        if (!in_array($content_type, $valid_content_types)) {
+            throw new Exception("Invalid content type");
+        }
+        
+        $result = Course::update(
+            $course_id,
+            $title,
+            $description,
+            $category,
+            $price,
+            $status,
+            $media_path,
+            $is_approved,
+            $content_type
+        );
+        
+        if ($result) {
+            echo json_encode(['success' => true]);
+        } else {
+            throw new Exception("Failed to update course");
+        }
+    } catch (Exception $e) {
+        error_log("Course update error: " . $e->getMessage());
+        http_response_code(500);
+        echo json_encode(['error' => $e->getMessage()]);
+    }
+    exit;
 }
 
 // Fetch the teacher's courses
@@ -67,7 +121,8 @@ $total_courses = count($courses);
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Teacher Dashboard</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com"></script>     
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   </head>
   <body class="min-h-screen bg-slate-50 p-8">
   <div class="max-w-7xl mx-auto">
@@ -205,106 +260,206 @@ $total_courses = count($courses);
     </nav>
   <?php endif; ?>
 </div>
-
 <!-- Edit Course Form Popup -->
 <div id="courseFormPopup" class="hidden fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center">
-  <form id="courseForm" method="POST" action="" class="bg-white rounded-lg shadow-lg p-8 max-w-md w-full">
+  <form id="courseForm" method="POST" action="" class="bg-white rounded-lg shadow-lg p-8 max-w-md w-full" enctype="multipart/form-data">
     <input type="hidden" name="course_id" id="course_id">
     <h2 class="text-2xl font-bold text-slate-800 mb-4">Edit Course</h2>
     <div class="mb-4">
       <label for="title" class="block text-sm font-medium text-gray-700">Title</label>
       <input type="text" name="title" id="title" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-  </div>
-  <div class="mb-4">
-    <label for="description" class="block text-sm font-medium text-gray-700">Description</label>
-    <textarea name="description" id="description" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"></textarea>
-  </div>
-  <div class="mb-4">
+    </div>
+    <div class="mb-4">
+      <label for="description" class="block text-sm font-medium text-gray-700">Description</label>
+      <textarea name="description" id="description" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"></textarea>
+    </div>
+    <div class="mb-4">
     <label for="category" class="block text-sm font-medium text-gray-700">Category</label>
-    <input type="text" name="category" id="category" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-  </div>
-  <div class="mb-4">
-    <label for="price" class="block text-sm font-medium text-gray-700">Price</label>
-    <input type="text" name="price" id="price" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-  </div>
-  <div class="mb-4">
-    <label for="status" class="block text-sm font-medium text-gray-700">Status</label>
-    <input type="text" name="status" id="status" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-  </div>
-  <div class="mb-4">
-    <label for="media_path" class="block text-sm font-medium text-gray-700">Media Path</label>
-    <input type="text" name="media_path" id="media_path" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-  </div>
-  <div class="mb-4">
-    <label for="content_type" class="block text-sm font-medium text-gray-700">Content Type</label>
-    <input type="text" name="content_type" id="content_type" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-  </div>
-  <div class="mb-4">
-    <label for="is_approved" class="block text-sm font-medium text-gray-700">Approved</label>
-    <input type="checkbox" name="is_approved" id="is_approved" class="mt-1 p-2 block">
-  </div>
-  <div class="flex justify-end">
-    <button type="button" onclick="closeCourseForm()" class="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition-all mr-2">Cancel</button>
-    <button type="submit" name="save_course" class="bg-violet-600 text-white px-4 py-2 rounded-md hover:bg-violet-700 transition-all">Save</button>
-  </div>
+    <select name="category" id="category" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" required>
+        <?php 
+        $db = Database::getInstance()->getConnection();
+        $categories = $db->query("SELECT id_category, name FROM Categories")->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($categories as $category): ?>
+            <option value="<?php echo htmlspecialchars($category['id_category']); ?>">
+                <?php echo htmlspecialchars($category['name']); ?>
+            </option>
+        <?php endforeach; ?>
+    </select>
+</div>
+    <div class="mb-4">
+      <label for="price" class="block text-sm font-medium text-gray-700">Price</label>
+      <input type="text" name="price" id="price" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+    </div>
+    <div class="mb-4">
+      <label for="status" class="block text-sm font-medium text-gray-700">Status</label>
+      <select name="status" id="status" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"></select>
+    </div>
+    <div class="mb-4">
+      <label for="media_path" class="block text-sm font-medium text-gray-700">Media Path</label>
+      <input type="file" name="media_path" id="media_path" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+    </div>
+    <div class="mb-4">
+      <label for="content_type" class="block text-sm font-medium text-gray-700">Content Type</label>
+      <select name="content_type" id="content_type" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"></select>
+    </div>
+    <div class="mb-4">
+      <label for="is_approved" class="block text-sm font-medium text-gray-700">Approved</label>
+      <input type="checkbox" name="is_approved" id="is_approved" class="mt-1 p-2 block">
+    </div>
+    <div class="flex justify-end">
+      <button type="button" onclick="closeCourseForm()" class="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition-all mr-2">Cancel</button>
+      <button type="button" onclick="saveCourse()" class="bg-violet-600 text-white px-4 py-2 rounded-md hover:bg-violet-700 transition-all">Save</button>
+    </div>
   </form>
 </div>
+
 <script>
-function editCourse(courseId) {
-  // Fetch course data and populate form
-  fetch(`getJson.php?id=${courseId}`)
+document.addEventListener('DOMContentLoaded', function () {
+  // Fetch and populate dropdown options
+  fetch('getJson.php')
     .then(response => response.json())
     .then(data => {
-      if (data.error) {
-        Swal.fire('Error!', data.error, 'error');
-      } else {
-        document.getElementById('course_id').value = data.id_course;
-        document.getElementById('title').value = data.title;
-        document.getElementById('description').value = data.description;
-        document.getElementById('category').value = data.category;
-        document.getElementById('price').value = data.price;
-        document.getElementById('status').value = data.status;
-        document.getElementById('media_path').value = data.media_path;
-        document.getElementById('content_type').value = data.content_type;
-        document.getElementById('is_approved').checked = data.is_approved;
-
-        // Show the form popup
-        document.getElementById('courseFormPopup').classList.remove('hidden');
-      }
+      populateDropdown('category', data.categories);
+      populateDropdown('status', data.statuses);
+      populateDropdown('content_type', data.content_types);
     }).catch(error => {
-      Swal.fire('Error!', 'Failed to fetch course data.', 'error');
-      console.error('Error fetching course data:', error);
+      console.error('Error fetching dropdown options:', error);
+    });
+});
+
+function populateDropdown(dropdownId, options) {
+    const dropdown = document.getElementById(dropdownId);
+    dropdown.innerHTML = '';
+    
+    if (dropdownId === 'content_type') {
+        // Use exact enum values from database
+        const contentTypeLabels = {
+            'video': 'Video',
+            'file': 'File',
+            'image': 'Image',
+            'text': 'Text'
+        };
+        options.forEach(type => {
+            const opt = document.createElement('option');
+            opt.value = type;  // lowercase enum value
+            opt.textContent = contentTypeLabels[type];  // Capitalized label
+            dropdown.appendChild(opt);
+        });
+    } else if (dropdownId === 'category') {
+        options.forEach(option => {
+            const opt = document.createElement('option');
+            opt.value = option.id_category;
+            opt.textContent = option.name;
+            dropdown.appendChild(opt);
+        });
+    } else {
+        options.forEach(option => {
+            const opt = document.createElement('option');
+            opt.value = option;
+            opt.textContent = option;
+            dropdown.appendChild(opt);
+        });
+    }
+}
+// Update the existing saveCourse function
+function saveCourse() {
+    const formData = new FormData(document.getElementById('courseForm'));
+    formData.append('save_course', '1');
+    
+    // Handle file upload
+    const fileInput = document.getElementById('media_path');
+    if (fileInput.files.length > 0) {
+        formData.append('media_path', fileInput.files[0]);
+    }
+    
+    // Debug log
+    for (let pair of formData.entries()) {
+        console.log(pair[0] + ': ' + (pair[1] instanceof File ? pair[1].name : pair[1]));
+    }
+
+    fetch('', {
+        method: 'POST',
+        body: formData,
+        // Don't set Content-Type header - let the browser set it with the correct boundary
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.error) {
+            throw new Error(data.error);
+        }
+        Swal.fire({
+            title: 'Success!',
+            text: 'Your course has been saved.',
+            icon: 'success',
+            timer: 1500,
+            showConfirmButton: false
+        });
+        closeCourseForm();
+        // Reload the page after the alert is shown
+        setTimeout(() => {
+            location.reload();
+        }, 1600);
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        Swal.fire({
+            title: 'Error!',
+            text: error.message || 'There was a problem saving the course.',
+            icon: 'error'
+        });
     });
 }
 
+// Update the editCourse function to show the current media path
+function editCourse(courseId) {
+    fetch(`getJson.php?id=${courseId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                Swal.fire('Error!', data.error, 'error');
+                return;
+            }
+            
+            // Populate form fields
+            document.getElementById('course_id').value = data.id_course;
+            document.getElementById('title').value = data.title;
+            document.getElementById('description').value = data.description;
+            document.getElementById('category').value = data.category;
+            document.getElementById('price').value = data.price;
+            document.getElementById('status').value = data.status;
+            document.getElementById('content_type').value = data.content_type;
+            document.getElementById('is_approved').checked = data.is_approved == 1;
+            
+            // Clear the file input but show the current file name if it exists
+            const mediaInput = document.getElementById('media_path');
+            mediaInput.value = ''; // Clear the file input
+            
+            // Add a label showing the current media file if it exists
+            const existingMediaLabel = document.getElementById('existing_media_label') || document.createElement('div');
+            existingMediaLabel.id = 'existing_media_label';
+            if (data.media_path) {
+                existingMediaLabel.textContent = `Current file: ${data.media_path.split('/').pop()}`;
+                existingMediaLabel.className = 'text-sm text-gray-600 mt-1';
+                mediaInput.parentNode.insertBefore(existingMediaLabel, mediaInput.nextSibling);
+            } else {
+                existingMediaLabel.remove();
+            }
+
+            // Show the form popup
+            document.getElementById('courseFormPopup').classList.remove('hidden');
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            Swal.fire('Error!', 'Failed to fetch course data.', 'error');
+        });
+}
 function closeCourseForm() {
   document.getElementById('courseFormPopup').classList.add('hidden');
-}
-
-function saveCourse() {
-  // Create a FormData object
-  const formData = new FormData(document.getElementById('courseForm'));
-
-  fetch('', {
-    method: 'POST',
-    body: formData
-  }).then(response => {
-    if (response.ok) {
-      // Show success alert
-      Swal.fire('Saved!', 'Your course has been saved.', 'success');
-      // Close the form popup and reload the page to reflect changes
-      closeCourseForm();
-      setTimeout(() => {
-        location.reload();
-      }, 1500);
-    } else {
-      // Show error alert
-      Swal.fire('Error!', 'There was an error saving your course.', 'error');
-    }
-  }).catch(error => {
-    Swal.fire('Error!', 'There was an error saving your course.', 'error');
-    console.error('Error saving course:', error);
-  });
 }
 
 function confirmDeleteCourse(courseId) {
@@ -345,6 +500,7 @@ function confirmDeleteCourse(courseId) {
   });
 }
 </script>
+
 
 </div>
 

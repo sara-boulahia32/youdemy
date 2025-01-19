@@ -4,11 +4,12 @@ require_once __DIR__ . '/../../src/config/autoloader.php';
 use Models\Course;
 use Database\Database;
 
+$db = Database::getInstance()->getConnection();
+
 if (isset($_GET['id'])) {
     $course_id = (int) $_GET['id'];
 
     // Fetch the course from the database
-    $db = Database::getInstance()->getConnection();
     $stmt = $db->prepare("SELECT * FROM Courses WHERE id_course = :id");
     $stmt->bindValue(':id', $course_id, PDO::PARAM_INT);
     $stmt->execute();
@@ -19,7 +20,17 @@ if (isset($_GET['id'])) {
     } else {
         echo json_encode(['error' => 'Course not found']);
     }
-} else {
-    echo json_encode(['error' => 'Invalid request']);
+}  else {
+    // Fetch Categories with IDs
+    $categories_stmt = $db->query("SELECT id_category, name FROM Categories");
+    $categories = $categories_stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $content_types = ['video', 'file', 'image', 'text'];
+
+    echo json_encode([
+        'categories' => $categories,
+        'statuses' => ['Draft', 'Published'],
+        'content_types' => $content_types
+    ]);
 }
 ?>

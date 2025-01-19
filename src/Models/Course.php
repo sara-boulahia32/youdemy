@@ -195,19 +195,37 @@ class Course {
     }
 
     public static function update($id, $title, $description, $category, $price, $status, $media_path, $is_approved, $content_type) {
+        // Validate content type
+        $valid_content_types = ['video', 'file', 'image', 'text'];
+        // if (!in_array(strtolower($content_type), $valid_content_types)) {
+        //     throw new Exception("Invalid content type");
+        // }
+    
         $db = Database::getInstance()->getConnection();
-        $stmt = $db->prepare("UPDATE Courses SET title = :title, description = :description, category = :category, price = :price, status = :status, media_path = :media_path, is_approved = :is_approved, content_type = :content_type WHERE id_course = :id");
-        $stmt->bindValue(':id', $id, PDO::PARAM_INT);
-        $stmt->bindValue(':title', $title, PDO::PARAM_STR);
-        $stmt->bindValue(':description', $description, PDO::PARAM_STR);
-        $stmt->bindValue(':category', $category, PDO::PARAM_STR);
-        $stmt->bindValue(':price', $price, PDO::PARAM_STR);
-        $stmt->bindValue(':status', $status, PDO::PARAM_STR);
-        $stmt->bindValue(':media_path', $media_path, PDO::PARAM_STR);
-        $stmt->bindValue(':is_approved', $is_approved, PDO::PARAM_INT);
-        $stmt->bindValue(':content_type', $content_type, PDO::PARAM_STR);
-        return $stmt->execute();
+        $stmt = $db->prepare("UPDATE Courses SET 
+            title = :title, 
+            description = :description, 
+            category = :category, 
+            price = :price, 
+            status = :status, 
+            media_path = :media_path, 
+            is_approved = :is_approved, 
+            content_type = :content_type 
+            WHERE id_course = :id");
+            
+        return $stmt->execute([
+            ':id' => $id,
+            ':title' => $title,
+            ':description' => $description,
+            ':category' => $category,
+            ':price' => $price,
+            ':status' => $status,
+            ':media_path' => $media_path,
+            ':is_approved' => $is_approved,
+            ':content_type' => strtolower($content_type)  // Ensure lowercase
+        ]);
     }
+    
 
     
 
