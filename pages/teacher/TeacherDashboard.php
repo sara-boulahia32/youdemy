@@ -35,17 +35,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_course'])) {
         $media_path = null;
         if (isset($_FILES['media_path']) && $_FILES['media_path']['error'] == UPLOAD_ERR_OK) {
             // Create upload directory if it doesn't exist
-            $upload_dir = __DIR__ . '/../../public/uploads/courses/';
+            $upload_dir = __DIR__ . '/../../public/uploads/';
             if (!file_exists($upload_dir)) {
                 mkdir($upload_dir, 0777, true);
             }
             
-            $file_extension = pathinfo($_FILES['media_path']['name'], PATHINFO_EXTENSION);
-            $file_name = uniqid('course_') . '.' . $file_extension;
+            $file_name =  $_FILES['media_path']['name'];
             $uploaded_file = $upload_dir . $file_name;
             
             if (move_uploaded_file($_FILES['media_path']['tmp_name'], $uploaded_file)) {
-                $media_path = '/uploads/courses/' . $file_name; // Store relative path in database
+                $media_path = '../../public/uploads/' . $file_name; // Store relative path in database
             } else {
                 throw new Exception("Failed to upload file: " . error_get_last()['message']);
             }
@@ -81,11 +80,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_course'])) {
             $content_type
         );
         
-        if ($result) {
-            echo json_encode(['success' => true]);
-        } else {
+        if (!$result) {
+            error_log("Course update failed for course_id: " . $course_id);
             throw new Exception("Failed to update course");
         }
+        
+        error_log("Course updated successfully with media_path: " . $media_path);
+        echo json_encode(['success' => true]);
     } catch (Exception $e) {
         error_log("Course update error: " . $e->getMessage());
         http_response_code(500);
@@ -368,8 +369,11 @@ function saveCourse() {
     
     // Handle file upload
     const fileInput = document.getElementById('media_path');
-    if (fileInput.files.length > 0) {
-        formData.append('media_path', fileInput.files[0]);
+    const existingMediaLabel = document.getElementById('existing_media_label');
+    if (fileInput.files.length === 0 && existingMediaLabel) {
+        // If no new file is selected but there's an existing media path, preserve it
+        const existingPath = existingMediaLabel.textContent.replace('Current file: ', '');
+        formData.append('existing_media_path', existingPath);
     }
     
     // Debug log
