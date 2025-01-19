@@ -3,6 +3,8 @@ namespace Models;
 
 use Database\Database;
 use PDO;
+use PDOException;
+
 
 class Course {
     private $id;
@@ -189,14 +191,39 @@ class Course {
 
     public static function deleteById($id) {
         $db = Database::getInstance()->getConnection();
-        $stmt = $db->prepare("DELETE FROM Courses WHERE id_course = :id");
-        $stmt->bindValue(':id', $id, PDO::PARAM_INT);
-        return $stmt->execute();
+        try {
+            // Start transaction
+            $db->beginTransaction();
+            
+            // First delete related records from course_tags
+            $stmt = $db->prepare("DELETE FROM Course_Tags WHERE id_course = :id");
+            $stmt->bindValue(':id', $id, PDO::PARAM_INT);
+            $stmt->execute();
+            
+            // Then delete any records from Reservations if they exist
+            $stmt = $db->prepare("DELETE FROM Reservations WHERE id_course = :id");
+            $stmt->bindValue(':id', $id, PDO::PARAM_INT);
+            $stmt->execute();
+            
+            // Finally delete the course
+            $stmt = $db->prepare("DELETE FROM Courses WHERE id_course = :id");
+            $stmt->bindValue(':id', $id, PDO::PARAM_INT);
+            $stmt->execute();
+            
+            // If we got here, commit the transaction
+            $db->commit();
+            return true;
+        } catch (PDOException $e) {
+            // If anything went wrong, roll back the transaction
+            $db->rollBack();
+            error_log("Error deleting course: " . $e->getMessage());
+            return false;
+        }
     }
 
     public static function update($id, $title, $description, $category, $price, $status, $media_path, $is_approved, $content_type) {
         // Validate content type
-        $valid_content_types = ['video', 'file', 'image', 'text'];
+        // $valid_content_types = ['video', 'file', 'image', 'text'];
         // if (!in_array(strtolower($content_type), $valid_content_types)) {
         //     throw new Exception("Invalid content type");
         // }

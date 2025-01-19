@@ -33,4 +33,5 @@ if (isset($_GET['id'])) {
         'content_types' => $content_types
     ]);
 }
+
 ?>

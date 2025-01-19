@@ -14,8 +14,18 @@ session_start(); // Ensure session is started to check user role
 // }
 
 $teacher_id = $_SESSION['user_id'];
-
-// Handle delete course request
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['delete_course_id'])) {
+    $course_id = $_POST['delete_course_id'];
+    $result = Course::deleteById($course_id);
+    
+    if ($result) {
+        echo json_encode(['success' => true]);
+    } else {
+        echo json_encode(['error' => 'Failed to delete course']);
+    }
+    exit;
+}
+    // Handle delete course request
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_course'])) {
     try {
         // Debug logging
@@ -466,6 +476,7 @@ function closeCourseForm() {
   document.getElementById('courseFormPopup').classList.add('hidden');
 }
 
+
 function confirmDeleteCourse(courseId) {
   Swal.fire({
     title: 'Are you sure?',
@@ -480,23 +491,25 @@ function confirmDeleteCourse(courseId) {
       // Create a FormData object for delete
       const formData = new FormData();
       formData.append('delete_course_id', courseId);
-
-      fetch('', {
+      
+      fetch('', {  // Empty string means current page URL
         method: 'POST',
         body: formData
-      }).then(response => {
-        if (response.ok) {
-          // Show success alert
-          Swal.fire('Deleted!', 'Your course has been deleted.', 'success');
-          // Reload the page to reflect changes
-          setTimeout(() => {
-            location.reload();
-          }, 1500);
-        } else {
-          // Show error alert
-          Swal.fire('Error!', 'There was an error deleting your course.', 'error');
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.error) {
+          throw new Error(data.error);
         }
-      }).catch(error => {
+        // Show success alert
+        Swal.fire('Deleted!', 'Your course has been deleted.', 'success');
+        // Reload the page to reflect changes
+        setTimeout(() => {
+          location.reload();
+        }, 1500);
+      })
+      .catch(error => {
+        // Show error alert
         Swal.fire('Error!', 'There was an error deleting your course.', 'error');
         console.error('Error deleting course:', error);
       });
