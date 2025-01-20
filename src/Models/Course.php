@@ -188,6 +188,32 @@ class Course {
 
         return $courses;
     }
+    public static function getByStudent($user_id) {
+        $db = Database::getInstance()->getConnection();
+        $stmt = $db->prepare("SELECT * FROM Courses JOIN Reservations ON Courses.id_course = Reservations.id_course WHERE Reservations.id_user = :student_id");
+        $stmt->bindValue(':student_id', $user_id, PDO::PARAM_INT);
+        $stmt->execute();
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+        $courses = [];
+        foreach ($rows as $row) {
+            $courses[] = new self(
+                $row['id_course'],
+                $row['title'],
+                $row['description'],
+                $row['category'],
+                $row['price'],
+                $row['status'],
+                $row['media_path'],
+                $row['is_approved'],
+                $row['id_author'],
+                $row['content_type']
+            );
+        }
+    
+        return $courses;
+    }
+    
 
     public static function deleteById($id) {
         $db = Database::getInstance()->getConnection();
@@ -334,7 +360,7 @@ class Course {
     public function getauthor() {
         return $this->id_author;
     }
-    public function getContentType() { // Your logic here to get the content type 
+    public function getContentType() {  
         return $this->content_type;; }
 }
 

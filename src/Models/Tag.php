@@ -3,7 +3,7 @@ namespace Models;
 
 use Database\Database;
 use PDO;
-use PDOException;
+// use PDOException;
 
 
 class Tag {
