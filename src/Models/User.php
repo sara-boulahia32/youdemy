@@ -191,12 +191,12 @@ $stmt->bindValue(':validate', $validate ? 1 : 0, PDO::PARAM_INT);
 
     public static function manageUser($user_id, $action) {
         $db = Database::getInstance()->getConnection();
-        $status = ($action == 'activate') ? 'active' : 'suspended';
+        $is_active = ($action == 'activate') ? 1 : 0;
         if ($action == 'delete') {
-            $stmt = $db->prepare("DELETE FROM Users WHERE id = :id");
+            $stmt = $db->prepare("DELETE FROM Users WHERE id_user = :id");
         } else {
-            $stmt = $db->prepare("UPDATE Users SET status = :status WHERE id = :id");
-            $stmt->bindValue(':status', $status, PDO::PARAM_STR);
+            $stmt = $db->prepare("UPDATE Users SET is_active = :is_active WHERE id_user = :id");
+            $stmt->bindValue(':is_active', $is_active, PDO::PARAM_STR);
         }
         $stmt->bindValue(':id', $user_id, PDO::PARAM_INT);
         return $stmt->execute();

@@ -27,6 +27,16 @@ class Tag {
             return false;
         }
     }
+    public static function create($data) {
+        $db = Database::getInstance()->getConnection();
+        $stmt = $db->prepare("INSERT INTO Tags (name) VALUES (:name)");
+        return $stmt->execute([':name' => $data['name']]);
+    }
+    public static function deleteById($id) {
+        $db = Database::getInstance()->getConnection();
+        $stmt = $db->prepare("DELETE FROM Tags WHERE id_tags = :id");
+        return $stmt->execute([':id' => $id]);
+    }
 
     public static function getById($id) {
         $pdo = Database::getInstance()->getConnection();

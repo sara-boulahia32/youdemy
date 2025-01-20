@@ -54,50 +54,113 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
         exit();
     }
-
-    // Handle user management
-    if (isset($_POST['manage_user_id'])) {
-        try {
-            $user_id = intval($_POST['manage_user_id']);
-            $action = $_POST['action'];
-            User::manageUser($user_id, $action);
-            echo json_encode(['success' => true]);
-        } catch (Exception $e) {
-            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
-        }
-        exit();
-    }
+  //  handle user manangement
+    if (isset($_POST['manage_user_id'], $_POST['action'])) {
+      try {
+          $user_id = intval($_POST['manage_user_id']);
+          $action = $_POST['action'];
+  
+          // Validate action
+          if (!in_array($action, ['activate', 'deactivate', 'delete'])) {
+              throw new Exception('Invalid action');
+          }
+  
+          // Call the manageUser function
+          $result = User::manageUser($user_id, $action);
+  
+          if ($result) {
+              echo json_encode(['success' => true]);
+          } else {
+              throw new Exception('Database operation failed');
+          }
+      } catch (Exception $e) {
+          echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+      }
+      exit();
+  }
+  
+  
+  
 
     // Handle course management
     if (isset($_POST['manage_course_id'])) {
-        try {
-            $course_id = intval($_POST['manage_course_id']);
-            $action = $_POST['action'];
-            if ($action === 'delete') {
-                Course::deleteById($course_id);
-            }
-            echo json_encode(['success' => true]);
-        } catch (Exception $e) {
-            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
-        }
-        exit();
-    }
-
-    // Handle bulk tag addition
-    if (isset($_POST['bulk_tags'])) {
       try {
-          $tags = array_map('trim', explode(',', $_POST['bulk_tags']));
-          foreach ($tags as $tagName) {
-              if (!empty($tagName)) {
-                  Tag::create(['name' => $tagName]);
+          $course_id = intval($_POST['manage_course_id']);
+          $action = $_POST['action'];
+  
+          if ($action === 'delete') {
+              Course::deleteById($course_id);
+          } elseif ($action === 'publish') {
+              // Update the course status to 'Published' if it is 'Draft'
+              $result = Course::updateStatus($course_id);
+  
+              if (!$result) {
+                  throw new Exception("Failed to update course status. The course may not be in 'Draft' status.");
               }
           }
+  
           echo json_encode(['success' => true]);
       } catch (Exception $e) {
           echo json_encode(['success' => false, 'error' => $e->getMessage()]);
       }
       exit();
   }
+  
+  
+
+// Handle bulk tag addition
+if (isset($_POST['bulk_tags'])) {
+  try {
+      $tags = array_map('trim', explode(',', $_POST['bulk_tags']));
+      $addedCount = 0;
+      
+      foreach ($tags as $tagName) {
+          if (!empty($tagName)) {
+              if (Tag::create(['name' => $tagName])) {
+                  $addedCount++;
+              }
+          }
+      }
+      
+      echo json_encode([
+          'success' => true,
+          'message' => "$addedCount tags added successfully"
+      ]);
+  } catch (Exception $e) {
+      echo json_encode([
+          'success' => false, 
+          'error' => $e->getMessage()
+      ]);
+  }
+  exit();
+}
+// Handle tag deletion
+if (isset($_POST['manage_tag_id'])) {
+  try {
+      $tag_id = intval($_POST['manage_tag_id']);
+      $action = $_POST['action'];
+
+      if ($action === 'delete') {
+          if (Tag::deleteById($tag_id)) {
+              echo json_encode([
+                  'success' => true,
+                  'message' => 'Tag deleted successfully'
+              ]);
+          } else {
+              throw new Exception('Failed to delete tag');
+          }
+      } else {
+          throw new Exception('Invalid action');
+      }
+  } catch (Exception $e) {
+      echo json_encode([
+          'success' => false,
+          'error' => $e->getMessage()
+      ]);
+  }
+  exit();
+}
+
   
 }
 
@@ -347,7 +410,7 @@ $stats = [
                                     <?php echo htmlspecialchars($course['status']); ?>
                                 </span>
                                 <div class="flex gap-2">
-                                    <button onclick="manageCourse(<?php echo $course['id_course']; ?>, 'edit')"
+                                    <button onclick="manageCourse(<?php echo $course['id_course']; ?>, 'publish')"
                                             class="p-1 text-blue-600 hover:bg-blue-50 rounded">
                                         <i data-feather="edit-2"></i>
                                     </button>
@@ -587,7 +650,6 @@ function manageUser(userId, action) {
         }
     });
 }
-
 function manageCourse(courseId, action) {
     if (action === 'delete') {
         Swal.fire({
@@ -602,10 +664,25 @@ function manageCourse(courseId, action) {
                 submitCourseAction(courseId, action);
             }
         });
+    } else if (action === 'publish') {
+        Swal.fire({
+            title: 'Are you sure?',
+            text: "This will publish the course",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, publish it',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                submitCourseAction(courseId, action);
+            }
+        });
     } else {
         submitCourseAction(courseId, action);
     }
 }
+
+
 function submitCourseAction(courseId, action) {
     fetch('AdminDashboard.php', {
         method: 'POST',
@@ -617,9 +694,21 @@ function submitCourseAction(courseId, action) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
+            let actionText;
+            switch (action) {
+                case 'publish':
+                    actionText = 'published';
+                    break;
+                case 'delete':
+                    actionText = 'deleted';
+                    break;
+                default:
+                    actionText = action + 'ed'; // This handles other actions like 'edit'
+            }
+
             Swal.fire({
                 title: 'Success',
-                text: `Course has been ${action}d successfully`,
+                text: `Course has been ${actionText}`,
                 icon: 'success'
             }).then(() => {
                 window.location.reload();
@@ -630,29 +719,106 @@ function submitCourseAction(courseId, action) {
     });
 }
 
-        function manageTag(tagId, action) {
-            fetch('AdminDashboard.php', {
+function manageTag(tagId, action) {
+    if (action === 'delete') {
+        Swal.fire({
+            title: 'Are you sure?',
+            text: "This will permanently delete this tag",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, delete it',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                submitTagAction(tagId, action);
+            }
+        });
+    }
+}
+
+function submitTagAction(tagId, action) {
+    fetch('AdminDashboard.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `manage_tag_id=${tagId}&action=${action}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            Swal.fire({
+                title: 'Success',
+                text: data.message || 'Tag has been deleted',
+                icon: 'success'
+            }).then(() => {
+                window.location.reload();
+            });
+        } else {
+            Swal.fire('Error', data.error || 'Failed to delete tag', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        Swal.fire('Error', 'An error occurred while deleting the tag', 'error');
+    });
+}
+
+
+// Updated bulk tag addition function
+function showBulkTagModal() {
+    Swal.fire({
+        title: 'Add Bulk Tags',
+        input: 'textarea',
+        inputPlaceholder: 'Enter tags separated by commas...',
+        inputAttributes: {
+            'aria-label': 'Enter tags separated by commas'
+        },
+        showCancelButton: true,
+        confirmButtonText: 'Add Tags',
+        cancelButtonText: 'Cancel',
+        showLoaderOnConfirm: true,
+        preConfirm: (tags) => {
+            return fetch('AdminDashboard.php', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/x-www-form-urlencoded',
                 },
-                body: JSON.stringify({
-                    manage_tag_id: tagId,
-                    action: action
-                })
-            }).then(response => response.json()).then(data => {
-                if (data.success) {
-                    Swal.fire('Success', 'Tag management action successful.', 'success');
-                } else {
-                    Swal.fire('Error', 'An error occurred while managing tag.', 'error');
+                body: `bulk_tags=${encodeURIComponent(tags)}`
+            })
+            .then(response => {
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    return response.json();
                 }
+                throw new TypeError("Expected JSON response but got " + contentType);
+            })
+            .then(data => {
+                if (!data.success) {
+                    throw new Error(data.error || 'Error adding tags');
+                }
+                return data;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                throw new Error('Failed to add tags. Please try again.');
+            });
+        },
+        allowOutsideClick: () => !Swal.isLoading()
+    }).then((result) => {
+        if (result.value) {
+            Swal.fire({
+                title: 'Success',
+                text: result.value.message || 'Tags have been added successfully',
+                icon: 'success'
+            }).then(() => {
+                window.location.reload();
             });
         }
-
-        function bulkAddTags() {
-            // Logic to bulk add tags
-        }
-
+    }).catch(error => {
+        Swal.fire('Error', error.message, 'error');
+    });
+}
         document.addEventListener('alpine:init', () => {
     console.log('Alpine.js initialized');
     Alpine.data('dashboard', () => ({

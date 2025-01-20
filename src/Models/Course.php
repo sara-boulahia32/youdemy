@@ -252,6 +252,25 @@ class Course {
             ':content_type' => strtolower($content_type)  // Ensure lowercase
         ]);
     }
+    public static function updateStatus($course_id) {
+        $db = Database::getInstance()->getConnection();
+        
+        // Check the current status of the course
+        $stmt = $db->prepare("SELECT status FROM Courses WHERE id_course = :id");
+        $stmt->bindValue(':id', $course_id, PDO::PARAM_INT);
+        $stmt->execute();
+        $course = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+        if ($course && $course['status'] === 'Draft') {
+            // Update the status to 'Published' if it's currently 'Draft'
+            $stmt = $db->prepare("UPDATE Courses SET status = 'Published' WHERE id_course = :id");
+            return $stmt->execute([':id' => $course_id]);
+        }
+    
+        return false; // Return false if the course was not in 'Draft'
+    }
+    
+    
     
         public static function getTopCourse() {
             $db = Database::getInstance()->getConnection();
