@@ -7,6 +7,8 @@ require_once('../../src/config/autoloader.php');
 use Database\Database;
 use Models\CourseText;
 use Models\CourseVideo;
+use Models\CoursTexte;
+use Models\CoursVideo;
 
 session_start(); // Start the session to access the logged-in user
 header('Content-Type: application/json');
@@ -29,6 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             throw new Exception("User is not logged in.");
         }
 
+        $course_id;
         // Handle file upload or text input based on content type
         if ($content_type === 'video' || $content_type === 'file' || $content_type === 'image') {
             if (isset($_FILES['content']) && $_FILES['content']['error'] == 0) {
@@ -36,12 +39,19 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 if (!move_uploaded_file($_FILES['content']['tmp_name'], $media_path)) {
                     throw new Exception("Failed to upload file.");
                 }
+
+                $course = new CoursVideo($title, $description, $category, $price, $status, $media_path, $is_approved, $id_author, $content_type);
+                $course_id = $course->create();
+
             } else {
                 throw new Exception("No file uploaded or upload error.");
             }
         } else if ($content_type === 'text') {
             if (isset($_POST['content']) && !empty($_POST['content'])) {
                 $media_path = $_POST['content'];
+
+                $course = new CoursTexte($title, $description, $category, $price, $status, $media_path, $is_approved, $id_author, $content_type);
+                $course_id = $course->create();
             } else {
                 throw new Exception("Text content cannot be empty.");
             }
@@ -52,9 +62,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $selectedTags = json_decode($_POST['selectedTags'], true);
 
         // Insert course data with id_author
-        $stmt = $db->prepare("INSERT INTO Courses (title, content, category, description, price, media_path, content_type, is_approved, id_author) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        $stmt->execute([$title, $media_path, $category, $description, $price, $media_path, $content_type, $is_approved, $id_author]);
-        $course_id = $db->lastInsertId();
+        // $stmt = $db->prepare("INSERT INTO Courses (title, content, category, description, price, media_path, content_type, is_approved, id_author) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        // $stmt->execute([$title, $media_path, $category, $description, $price, $media_path, $content_type, $is_approved, $id_author]);
+        // $course_id = $db->lastInsertId();
         error_log("Course inserted successfully with ID $course_id");
 
         // Insert tags and link them to the course

@@ -4,6 +4,12 @@ use Models\Course;
 use Models\Category;
 
 session_start();
+// Ensure the user is a student
+// if (!isset($_SESSION['id_user']) || $_SESSION['role'] !== 'student') {
+//     header("Location: login.php");
+//     exit();
+// }
+ var_dump($_SESSION['role']);
 $user_id = $_SESSION['user_id']; // Assume user is logged in
 $keyword = isset($_GET['search']) ? $_GET['search'] : '';
 $coursesPerPage = isset($_GET['coursesPerPage']) ? intval($_GET['coursesPerPage']) : 3;

@@ -15,9 +15,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $user = User::signin($email, $password);
         // Start session and set user session variables
         session_start();
-        $_SESSION['user_id'] = $user->getId();
-        $_SESSION['user_name'] = $user->getName();
-        $_SESSION['user_role'] = $user->getRole();
+        $_SESSION['id_user'] = $user->getId();
+        $_SESSION['name'] = $user->getName();
+        $_SESSION['role'] = $user->getRole();
         $showAlert = true;
         $alertMessage = "Welcome back, " . $user->getName() . "!";
     } catch (Exception $e) {

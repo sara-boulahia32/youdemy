@@ -7,19 +7,19 @@ use PDOException;
 
 
 class Course {
-    private $id;
-    private $title;
-    private $description;
-    private $category;
-    private $price;
-    private $status;
-    private $media_path;
-    private $is_approved;
-    private $id_author;
-    private $content_type;
+    protected $id;
+    protected $title;
+    protected $description;
+    protected $category;
+    protected $price;
+    protected $status;
+    protected $media_path;
+    protected $is_approved;
+    protected $id_author;
+    protected $content_type;
 
-    public function __construct($id, $title, $description, $category, $price, $status, $media_path, $is_approved, $id_author, $content_type) {
-        $this->id = $id;
+    public function __construct($title, $description, $category, $price, $status, $media_path, $is_approved, $id_author, $content_type) {
+        // $this->id = $id;
         $this->title = $title;
         $this->description = $description;
         $this->category = $category;
