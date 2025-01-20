@@ -16,7 +16,7 @@ class CoursVideo extends Course implements ICreateCourse {
     public function create() {
         $pdo = Database::getInstance()->getConnection();
         $stmt = $pdo->prepare("INSERT INTO Courses (title, content, category, description, price, media_path, content_type, is_approved, id_author) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        $stmt->execute([$this->title, $this->media_path, $this->category, $this->description, $this->price, $this->media_path, "video", $this->is_approved, $this->id_author]);
+        $stmt->execute([$this->title, $this->media_path, $this->category, $this->description, $this->price, $this->media_path, $this->content_type, $this->is_approved, $this->id_author]);
         $course_id = $pdo->lastInsertId();
 
     }
