@@ -253,6 +253,32 @@ class Course {
         ]);
     }
     
+        public static function getTopCourse() {
+            $db = Database::getInstance()->getConnection();
+            $stmt = $db->query("
+                SELECT Courses.title, COUNT(Reservations.id_reservation) as students 
+                FROM Courses 
+                LEFT JOIN Reservations ON Courses.id_course = Reservations.id_course 
+                GROUP BY Courses.id_course 
+                ORDER BY students DESC 
+                LIMIT 1
+            ");
+            return $stmt->fetch(PDO::FETCH_ASSOC);
+        }
+    
+        public static function countAll() {
+            $db = Database::getInstance()->getConnection();
+            $stmt = $db->query("SELECT COUNT(*) as total FROM Courses");
+            return $stmt->fetch(PDO::FETCH_ASSOC)['total'];
+        }
+    
+        public static function getAll() {
+            $db = Database::getInstance()->getConnection();
+            $stmt = $db->query("SELECT * FROM Courses");
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
+    
+
 
     
 

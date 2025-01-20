@@ -179,4 +179,55 @@ class User {
         $stmt->bindParam(':id', $this->id, PDO::PARAM_INT);
         $stmt->execute();
     }
-}
+
+    public static function validateTeacher($teacher_id, $validate) {
+        $db = Database::getInstance()->getConnection();
+        $stmt = $db->prepare("UPDATE Users SET is_valid = :validate WHERE id_user = :id");
+$stmt->bindValue(':validate', $validate ? 1 : 0, PDO::PARAM_INT);
+
+        $stmt->bindValue(':id', $teacher_id, PDO::PARAM_INT);
+        return $stmt->execute();
+    }
+
+    public static function manageUser($user_id, $action) {
+        $db = Database::getInstance()->getConnection();
+        $status = ($action == 'activate') ? 'active' : 'suspended';
+        if ($action == 'delete') {
+            $stmt = $db->prepare("DELETE FROM Users WHERE id = :id");
+        } else {
+            $stmt = $db->prepare("UPDATE Users SET status = :status WHERE id = :id");
+            $stmt->bindValue(':status', $status, PDO::PARAM_STR);
+        }
+        $stmt->bindValue(':id', $user_id, PDO::PARAM_INT);
+        return $stmt->execute();
+    }
+
+    public static function getAll() {
+        $db = Database::getInstance()->getConnection();
+        $stmt = $db->query("SELECT * FROM Users");
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public static function getPendingTeachers() {
+        $db = Database::getInstance()->getConnection();
+        $stmt = $db->query("SELECT * FROM Users WHERE role = 'teacher' AND is_valid = 0");
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+
+        public static function getTopTeachers() {
+            $db = Database::getInstance()->getConnection();
+            $stmt = $db->query("
+                SELECT Users.name, COUNT(Reservations.id_reservation) as subscriptions 
+                FROM Users 
+                INNER JOIN Courses ON Users.id_user = Courses.id_author 
+                LEFT JOIN Reservations ON Courses.id_course = Reservations.id_course 
+                WHERE Users.role = 'teacher' 
+                GROUP BY Users.id_user 
+                ORDER BY subscriptions DESC 
+                LIMIT 3
+            ");
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
+    }
+

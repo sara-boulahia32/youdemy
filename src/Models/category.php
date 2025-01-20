@@ -36,6 +36,34 @@ class Category {
 
         return $row ? new self($row['id_category'], $row['name']) : null;
     }
+    public static function create($data) {
+        $db = Database::getInstance()->getConnection();
+        $stmt = $db->prepare("INSERT INTO Categories (name) VALUES (:name)");
+        $stmt->bindValue(':name', $data['name'], PDO::PARAM_STR);
+        $stmt->execute();
+        return $db->lastInsertId();
+    }
+
+    public static function deleteById($id) {
+        $db = Database::getInstance()->getConnection();
+        $stmt = $db->prepare("DELETE FROM Categories WHERE id_category = :id");
+        $stmt->bindValue(':id', $id, PDO::PARAM_INT);
+        return $stmt->execute();
+    }
+
+    public static function getCourseDistribution() {
+        $db = Database::getInstance()->getConnection();
+        $stmt = $db->query("
+            SELECT category, COUNT(*) as count 
+            FROM Courses 
+            GROUP BY category
+        ");
+        $distribution = [];
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $distribution[$row['category']] = $row['count'];
+        }
+        return $distribution;
+    }
 
     public function getId() {
         return $this->id;

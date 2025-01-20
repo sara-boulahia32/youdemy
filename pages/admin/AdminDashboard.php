@@ -1,261 +1,670 @@
+<?php
+require_once __DIR__ . '/../../src/config/autoloader.php';
+
+use Models\Course;
+use Models\User;
+use Models\Tag;
+use Models\Category;
+
+session_start();
+
+
+
+// Ensure the user is an admin
+// if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
+//     header("Location: login.php");
+//     exit();
+// }
+
+// Handle AJAX requests
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    header('Content-Type: application/json');
+    if (isset($_POST['new_category'])) {
+      
+      try {
+          $name = trim($_POST['new_category']);
+          if (!empty($name)) {
+            // Insert the new category and get the ID of the new record
+            $lastInsertId = Category::create(['name' => $name]);
+    
+            // Debugging: Show the inserted name and ID
+            echo json_encode([
+                'success' => true,
+                'id' => $lastInsertId, // ID of the new category
+                'name' => $name        // The name of the inserted category
+            ]);
+        } else {
+            // If the name is empty
+            echo json_encode(['success' => false, 'error' => 'Category name cannot be empty']);
+        }
+      } catch (Exception $e) {
+          echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+      }
+      exit();
+  }
+    // Handle teacher validation
+    if (isset($_POST['validate_teacher_id'])) {
+        try {
+            $teacher_id = intval($_POST['validate_teacher_id']);
+            $validate = $_POST['validate'] === '1';
+            User::validateTeacher($teacher_id, $validate);
+            echo json_encode(['success' => true]);
+        } catch (Exception $e) {
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        }
+        exit();
+    }
+
+    // Handle user management
+    if (isset($_POST['manage_user_id'])) {
+        try {
+            $user_id = intval($_POST['manage_user_id']);
+            $action = $_POST['action'];
+            User::manageUser($user_id, $action);
+            echo json_encode(['success' => true]);
+        } catch (Exception $e) {
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        }
+        exit();
+    }
+
+    // Handle course management
+    if (isset($_POST['manage_course_id'])) {
+        try {
+            $course_id = intval($_POST['manage_course_id']);
+            $action = $_POST['action'];
+            if ($action === 'delete') {
+                Course::deleteById($course_id);
+            }
+            echo json_encode(['success' => true]);
+        } catch (Exception $e) {
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        }
+        exit();
+    }
+
+    // Handle bulk tag addition
+    if (isset($_POST['bulk_tags'])) {
+      try {
+          $tags = array_map('trim', explode(',', $_POST['bulk_tags']));
+          foreach ($tags as $tagName) {
+              if (!empty($tagName)) {
+                  Tag::create(['name' => $tagName]);
+              }
+          }
+          echo json_encode(['success' => true]);
+      } catch (Exception $e) {
+          echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+      }
+      exit();
+  }
+  
+}
+
+// Fetch dashboard data
+$stats = [
+    'total_courses' => Course::countAll(),
+    'courses_by_category' => Category::getCourseDistribution(),
+    'top_course' => Course::getTopCourse(),
+    'top_teachers' => User::getTopTeachers(),
+    'categories' => Category::getAll()
+];
+
+?>
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/feather-icons/4.28.0/feather.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/2.3.0/alpine.js"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/feather-icons"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://unpkg.com/alpinejs" defer></script>
+     <!-- Alpine.js -->
+     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <!-- Feather Icons -->
+    <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+    
 </head>
-<body class="bg-gray-50" x-data="{ activeTab: 'teachers', showTagModal: false }">
-    <!-- Top Navigation -->
-    <nav class="bg-white shadow-sm px-6 py-4">
-        <div class="flex items-center justify-between">
-            <h1 class="text-2xl font-bold text-gray-800">Admin Dashboard</h1>
-            <div class="flex items-center gap-4">
-                <div class="relative">
-                    <input type="search" placeholder="Rechercher..." class="pl-10 pr-4 py-2 rounded-lg border border-gray-200">
-                    <i data-feather="search" class="absolute left-3 top-2.5 h-5 w-5 text-gray-400"></i>
-                </div>
-                <button class="p-2 rounded-lg hover:bg-gray-100">
-                    <i data-feather="bell" class="h-5 w-5 text-gray-600"></i>
-                </button>
-            </div>
-        </div>
-    </nav>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('addCategory').addEventListener('click', addNewCategory);
+});
 
+  function addNewCategory() {
+    Swal.fire({
+        title: 'Add New Category',
+        input: 'text',
+        inputPlaceholder: 'Enter category name',
+        showCancelButton: true,
+        confirmButtonText: 'Add',
+        inputValidator: (value) => {
+            if (!value) {
+                return 'Category name cannot be empty!';
+            }
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            fetch('AdminDashboard.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `new_category=${encodeURIComponent(result.value)}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({
+                        title: 'Success',
+                        text: 'Category added successfully',
+                        icon: 'success'
+                    }).then(() => {
+                        window.location.reload();
+                    });
+                } else {
+                    Swal.fire('Error', data.error || 'An error occurred', 'error');
+                }
+            });
+        }
+    });
+}
+</script>
+<body class="min-h-screen bg-gray-100" x-data="{ activeTab: 'stats' }">
     <div class="flex">
         <!-- Sidebar -->
-        <aside class="w-64 bg-white h-screen shadow-sm p-4 hidden md:block">
-            <nav class="space-y-2">
-                <template x-for="tab in ['teachers', 'users', 'content', 'tags', 'stats']">
-                    <button 
-                        @click="activeTab = tab"
-                        :class="`w-full flex items-center gap-3 px-4 py-3 rounded-lg ${
-                            activeTab === tab ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50'
-                        }`"
-                    >
-                        <i :data-feather="
-                            tab === 'teachers' ? 'users' :
-                            tab === 'users' ? 'users' :
-                            tab === 'content' ? 'book-open' :
-                            tab === 'tags' ? 'tags' :
-                            'bar-chart-2'
-                        " class="h-5 w-5"></i>
-                        <span x-text="
-                            tab === 'teachers' ? 'Validation Enseignants' :
-                            tab === 'users' ? 'Gestion Utilisateurs' :
-                            tab === 'content' ? 'Gestion Contenus' :
-                            tab === 'tags' ? 'Gestion Tags' :
-                            'Statistiques'
-                        "></span>
-                    </button>
-                </template>
-            </nav>
+        <aside class="w-64 bg-white shadow-sm p-4 min-h-screen">
+            <div class="space-y-4">
+                <button @click="activeTab = 'stats'" 
+                        :class="{'bg-blue-50 text-blue-600': activeTab === 'stats'}"
+                        class="flex items-center space-x-2 w-full p-2 rounded-lg hover:bg-gray-50">
+                    <i data-feather="bar-chart-2"></i>
+                    <span>Statistics</span>
+                </button>
+                <button @click="activeTab = 'teachers'"
+                        :class="{'bg-blue-50 text-blue-600': activeTab === 'teachers'}"
+                        class="flex items-center space-x-2 w-full p-2 rounded-lg hover:bg-gray-50">
+                    <i data-feather="users"></i>
+                    <span>Teacher Validation</span>
+                </button>
+                <button @click="activeTab = 'users'"
+                        :class="{'bg-blue-50 text-blue-600': activeTab === 'users'}"
+                        class="flex items-center space-x-2 w-full p-2 rounded-lg hover:bg-gray-50">
+                    <i data-feather="user"></i>
+                    <span>User Management</span>
+                </button>
+                <button @click="activeTab = 'courses'"
+                        :class="{'bg-blue-50 text-blue-600': activeTab === 'courses'}"
+                        class="flex items-center space-x-2 w-full p-2 rounded-lg hover:bg-gray-50">
+                    <i data-feather="book"></i>
+                    <span>Course Management</span>
+                </button>
+                <button @click="activeTab = 'tags'"
+                        :class="{'bg-blue-50 text-blue-600': activeTab === 'tags'}"
+                        class="flex items-center space-x-2 w-full p-2 rounded-lg hover:bg-gray-50">
+                    <i data-feather="tag"></i>
+                    <span>Tag Management</span>
+                </button>
+                <button @click="activeTab = 'categories'" 
+        :class="{'bg-blue-50 text-blue-600': activeTab === 'categories'}"
+        class="flex items-center space-x-2 w-full p-2 rounded-lg hover:bg-gray-50">
+    <i data-feather="folder"></i>
+    <span>Categories</span>
+</button>
+            </div>
         </aside>
 
-        <!-- Mobile Menu -->
-        <div class="md:hidden w-full bg-white shadow-sm p-4">
-            <select @change="activeTab = $event.target.value" class="w-full p-2 border rounded-lg">
-                <option value="teachers">Validation Enseignants</option>
-                <option value="users">Gestion Utilisateurs</option>
-                <option value="content">Gestion Contenus</option>
-                <option value="tags">Gestion Tags</option>
-                <option value="stats">Statistiques</option>
-            </select>
-        </div>
-
         <!-- Main Content -->
-        <main class="flex-1 p-6">
-            <!-- Stats Section -->
-            <div x-show="activeTab === 'stats'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div class="bg-white p-6 rounded-lg shadow-sm">
+        <main class="flex-1 p-8">
+            <!-- Statistics -->
+            <div x-show="activeTab === 'stats'" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="bg-white p-6 rounded-lg shadow">
                     <h3 class="text-lg font-semibold mb-4">Total Courses</h3>
-                    <p class="text-3xl font-bold">156</p>
+                    <p class="text-3xl font-bold"><?php echo $stats['total_courses']; ?></p>
                 </div>
-                <div class="bg-white p-6 rounded-lg shadow-sm">
+                <div class="bg-white p-6 rounded-lg shadow">
                     <h3 class="text-lg font-semibold mb-4">Top Course</h3>
-                    <p class="text-xl font-medium">Web Development</p>
-                    <p class="text-gray-600">325 students</p>
+                    <p class="text-xl font-medium"><?php echo htmlspecialchars($stats['top_course']['title']); ?></p>
+                    <p class="text-gray-600"><?php echo $stats['top_course']['students']; ?> students</p>
                 </div>
-                <div class="bg-white p-6 rounded-lg shadow-sm">
+                <div class="bg-white p-6 rounded-lg shadow">
                     <h3 class="text-lg font-semibold mb-4">Top Teachers</h3>
-                    <div class="space-y-2">
-                        <div class="flex items-center justify-between">
-                            <span>Marie Dubois</span>
-                            <span class="text-blue-600 font-medium">4.8 ⭐️</span>
+                    <?php foreach ($stats['top_teachers'] as $teacher): ?>
+                        <div class="flex justify-between items-center mb-2">
+                            <span><?php echo htmlspecialchars($teacher['name']); ?></span>
+                            <span class="text-blue-600"><?php echo $teacher['subscriptions']; ?> students</span>
                         </div>
-                        <div class="flex items-center justify-between">
-                            <span>Jean Martin</span>
-                            <span class="text-blue-600 font-medium">4.7 ⭐️</span>
-                        </div>
-                        <div class="flex items-center justify-between">
-                            <span>Sophie Laurent</span>
-                            <span class="text-blue-600 font-medium">4.6 ⭐️</span>
-                        </div>
-                    </div>
+                    <?php endforeach; ?>
                 </div>
-            </div>
-
-            <!-- Teachers Section -->
-            <div x-show="activeTab === 'teachers'" class="bg-white rounded-lg shadow-sm">
-                <div class="p-6">
-                    <h2 class="text-xl font-semibold mb-4">Teacher Validation</h2>
-                    <div class="space-y-4">
-                        <template x-for="i in 3">
-                            <div class="flex items-center justify-between p-4 border rounded-lg">
-                                <div>
-                                    <h3 class="font-medium" x-text="`Teacher Application #${i}`"></h3>
-                                    <p class="text-gray-600" x-text="`Submitted on Jan ${i}, 2024`"></p>
-                                </div>
-                                <div class="flex gap-2">
-                                    <button class="p-2 text-green-600 hover:bg-green-50 rounded-lg">
-                                        <i data-feather="check" class="h-5 w-5"></i>
-                                    </button>
-                                    <button class="p-2 text-red-600 hover:bg-red-50 rounded-lg">
-                                        <i data-feather="x" class="h-5 w-5"></i>
-                                    </button>
-                                </div>
+                <div class="bg-white p-6 rounded-lg shadow col-span-2">
+        <h3 class="text-lg font-semibold mb-4">Course Distribution by Category</h3>
+        <div class="space-y-4">
+            <?php foreach ($stats['courses_by_category'] as $categoryId => $count): 
+                $category = Category::getById($categoryId);
+                if ($category):
+            ?>
+                <div class="flex items-center justify-between">
+                    <span><?php echo htmlspecialchars($category->getName()); ?></span>
+                    <div class="flex items-center gap-4">
+                        <div class="w-48 bg-gray-200 rounded-full h-2.5">
+                            <div class="bg-blue-600 h-2.5 rounded-full" 
+                                 style="width: <?php echo ($count / $stats['total_courses'] * 100); ?>%">
                             </div>
-                        </template>
+                        </div>
+                        <span class="text-gray-600"><?php echo $count; ?></span>
                     </div>
+                </div>
+            <?php 
+                endif;
+            endforeach; 
+            ?>
+        </div>
+    </div>
+            </div>
+
+            <!-- Teacher Validation -->
+            <div x-show="activeTab === 'teachers'" class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-xl font-semibold mb-4">Pending Teacher Validations</h2>
+                <div class="space-y-4">
+                    <?php foreach (User::getPendingTeachers() as $teacher): ?>
+                        <div class="flex items-center justify-between p-4 border rounded-lg">
+                            <div>
+                                <h3 class="font-medium"><?php echo htmlspecialchars($teacher['name']); ?></h3>
+                                <p class="text-gray-600"><?php echo htmlspecialchars($teacher['email']); ?></p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="validateTeacher(<?php echo $teacher['id_user']; ?>, true)" 
+                                        class="p-2 text-green-600 hover:bg-green-50 rounded">
+                                    <i data-feather="check"></i>
+                                </button>
+                                <button onclick="validateTeacher(<?php echo $teacher['id_user']; ?>, false)"
+                                        class="p-2 text-red-600 hover:bg-red-50 rounded">
+                                    <i data-feather="x"></i>
+                                </button>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
                 </div>
             </div>
 
-            <!-- Users Section -->
-            <div x-show="activeTab === 'users'" class="bg-white rounded-lg shadow-sm">
-                <div class="p-6">
-                    <h2 class="text-xl font-semibold mb-4">User Management</h2>
-                    <div class="overflow-x-auto">
-                        <table class="w-full">
-                            <thead>
+            <!-- User Management -->
+            <div x-show="activeTab === 'users'" class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-xl font-semibold mb-4">User Management</h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="border-b">
+                                <th class="text-left p-4">Name</th>
+                                <th class="text-left p-4">Email</th>
+                                <th class="text-left p-4">Role</th>
+                                <th class="text-left p-4">Status</th>
+                                <th class="text-left p-4">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach (User::getAll() as $user): ?>
                                 <tr class="border-b">
-                                    <th class="text-left p-4">User</th>
-                                    <th class="text-left p-4">Role</th>
-                                    <th class="text-left p-4">Status</th>
-                                    <th class="text-left p-4">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr class="border-b">
-                                    <td class="p-4">John Doe</td>
-                                    <td class="p-4">Student</td>
+                                    <td class="p-4"><?php echo htmlspecialchars($user['name']); ?></td>
+                                    <td class="p-4"><?php echo htmlspecialchars($user['email']); ?></td>
+                                    <td class="p-4"><?php echo htmlspecialchars($user['role']); ?></td>
                                     <td class="p-4">
-                                        <span class="px-2 py-1 rounded-full text-sm bg-green-100 text-green-800">
-                                            Active
+                                        <span class="px-2 py-1 rounded-full text-sm <?php echo $user['is_active'] ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'; ?>">
+                                            <?php echo $user['is_active'] ? 'Active' : 'Inactive'; ?>
                                         </span>
                                     </td>
                                     <td class="p-4">
                                         <div class="flex gap-2">
-                                            <button class="p-1 text-blue-600 hover:bg-blue-50 rounded">
-                                                <i data-feather="edit" class="h-4 w-4"></i>
+                                            <button onclick="manageUser(<?php echo $user['id_user']; ?>, '<?php echo $user['is_active'] ? 'deactivate' : 'activate'; ?>')"
+                                                    class="p-1 text-blue-600 hover:bg-blue-50 rounded">
+                                                <i data-feather="<?php echo $user['is_active'] ? 'eye-off' : 'eye'; ?>"></i>
                                             </button>
-                                            <button class="p-1 text-red-600 hover:bg-red-50 rounded">
-                                                <i data-feather="trash-2" class="h-4 w-4"></i>
+                                            <button onclick="manageUser(<?php echo $user['id_user']; ?>, 'delete')"
+                                                    class="p-1 text-red-600 hover:bg-red-50 rounded">
+                                                <i data-feather="trash-2"></i>
                                             </button>
                                         </div>
                                     </td>
                                 </tr>
-                                <!-- Add more user rows here -->
-                            </tbody>
-                        </table>
-                    </div>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
-            <!-- Content Section -->
-            <div x-show="activeTab === 'content'" class="bg-white rounded-lg shadow-sm">
-                <div class="p-6">
-                    <div class="flex justify-between items-center mb-6">
-                        <h2 class="text-xl font-semibold">Content Management</h2>
-                        <button class="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2">
-                            <i data-feather="plus" class="h-5 w-5"></i>
-                            Add Course
-                        </button>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        <template x-for="course in [
-                            { title: 'Web Development', category: 'Programming', status: 'Published' },
-                            { title: 'Digital Marketing', category: 'Marketing', status: 'Draft' },
-                            { title: 'UI/UX Design', category: 'Design', status: 'Published' }
-                        ]">
-                            <div class="border rounded-lg p-4">
-                                <h3 class="font-medium" x-text="course.title"></h3>
-                                <p class="text-gray-600" x-text="course.category"></p>
-                                <div class="mt-4 flex justify-between items-center">
-                                    <span :class="`px-2 py-1 rounded-full text-sm ${
-                                        course.status === 'Published' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                                    }`" x-text="course.status"></span>
-                                    <div class="flex gap-2">
-                                        <button class="p-1 text-blue-600 hover:bg-blue-50 rounded">
-                                            <i data-feather="edit" class="h-4 w-4"></i>
-                                        </button>
-                                        <button class="p-1 text-red-600 hover:bg-red-50 rounded">
-                                            <i data-feather="trash-2" class="h-4 w-4"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </template>
-                    </div>
+            <!-- Course Management -->
+            <div x-show="activeTab === 'courses'" class="bg-white rounded-lg shadow p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-semibold">Course Management</h2>
                 </div>
-            </div>
-
-            <!-- Tags Section -->
-            <div x-show="activeTab === 'tags'" class="bg-white rounded-lg shadow-sm">
-                <div class="p-6">
-                    <div class="flex justify-between items-center mb-6">
-                        <h2 class="text-xl font-semibold">Tag Management</h2>
-                        <button 
-                            @click="showTagModal = true"
-                            class="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"
-                        >
-                            <i data-feather="plus" class="h-5 w-5"></i>
-                            Bulk Add Tags
-                        </button>
-                    </div>
-                    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                        <template x-for="tag in ['JavaScript', 'Python', 'React', 'Vue.js', 'Node.js', 'HTML', 'CSS', 'Database', 'AWS', 'DevOps']">
-                            <div class="flex items-center justify-between p-3 border rounded-lg">
-                                <span x-text="tag"></span>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <?php foreach (Course::getAll() as $course): ?>
+                        <div class="border rounded-lg p-4">
+                            <h3 class="font-medium"><?php echo htmlspecialchars($course['title']); ?></h3>
+                            <p class="text-gray-600"><?php echo htmlspecialchars($course['category']); ?></p>
+                            <div class="mt-4 flex justify-between items-center">
+                                <span class="px-2 py-1 rounded-full text-sm <?php echo $course['status'] === 'Published' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'; ?>">
+                                    <?php echo htmlspecialchars($course['status']); ?>
+                                </span>
                                 <div class="flex gap-2">
-                                    <button class="p-1 text-blue-600 hover:bg-blue-50 rounded">
-                                        <i data-feather="edit" class="h-4 w-4"></i>
+                                    <button onclick="manageCourse(<?php echo $course['id_course']; ?>, 'edit')"
+                                            class="p-1 text-blue-600 hover:bg-blue-50 rounded">
+                                        <i data-feather="edit-2"></i>
                                     </button>
-                                    <button class="p-1 text-red-600 hover:bg-red-50 rounded">
-                                        <i data-feather="trash-2" class="h-4 w-4"></i>
+                                    <button onclick="manageCourse(<?php echo $course['id_course']; ?>, 'delete')"
+                                            class="p-1 text-red-600 hover:bg-red-50 rounded">
+                                        <i data-feather="trash-2"></i>
                                     </button>
                                 </div>
                             </div>
-                        </template>
-                    </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+            
+<!-- Category Management -->
+<div x-show="activeTab === 'categories'" class="bg-white rounded-lg shadow p-6">
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="text-xl font-semibold">Category Management</h2>
+        <button id="addCategory" class="add-category bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2">
+    <i data-feather="plus"></i>
+    Add Category
+</button>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <?php foreach ($stats['categories'] as $category): ?>
+        <div class="border rounded-lg p-4">
+            <div class="flex justify-between items-center">
+                <!-- Use the getter method -->
+                <h3 class="font-medium"><?php echo htmlspecialchars($category->getName()); ?></h3>
+                <div class="flex gap-2">
+                    <button onclick="manageCategory(<?php echo $category->getId(); ?>, 'edit')"
+                            class="p-1 text-blue-600 hover:bg-blue-50 rounded">
+                        <i data-feather="edit-2"></i>
+                    </button>
+                    <button onclick="manageCategory(<?php echo $category->getId(); ?>, 'delete')"
+                            class="p-1 text-red-600 hover:bg-red-50 rounded">
+                        <i data-feather="trash-2"></i>
+                    </button>
+                </div>
+            </div>
+            <p class="text-gray-600 mt-2">
+                <?php 
+                $courseCount = isset($stats['courses_by_category'][$category->getId()]) 
+                    ? $stats['courses_by_category'][$category->getId()] 
+                    : 0;
+                echo $courseCount . ' courses';
+                ?>
+            </p>
+        </div>
+    <?php endforeach; ?>
+</div>
+
+</div>
+
+            <!-- Tag Management -->
+            <div x-show="activeTab === 'tags'" class="bg-white rounded-lg shadow p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-semibold">Tag Management</h2>
+                    <button onclick="showBulkTagModal()"
+                            class="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2">
+                        <i data-feather="plus"></i>
+                        Bulk Add Tags
+                    </button>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                <?php foreach (Tag::getAll() as $tag): ?>
+    <div class="flex items-center justify-between p-3 border rounded-lg">
+        <span><?php echo htmlspecialchars($tag->getname()); ?></span>
+        <div class="flex gap-2">
+            <button onclick="manageTag(<?php echo $tag->getId(); ?>, 'delete')"
+                    class="p-1 text-red-600 hover:bg-red-50 rounded">
+                <i data-feather="trash-2"></i>
+            </button>
+        </div>
+    </div>
+<?php endforeach; ?>
+
                 </div>
             </div>
         </main>
     </div>
 
-    <!-- Bulk Tag Modal -->
-    <div x-show="showTagModal" class="fixed hidden inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-        <div class="bg-white rounded-lg p-6 w-full max-w-md">
-            <h3 class="text-lg font-semibold mb-4">Add Multiple Tags</h3>
-            <textarea class="w-full h-32 p-2 border rounded-lg mb-4" placeholder="Enter tags separated by commas..."></textarea>
-            <div class="flex justify-end gap-2">
-                <button @click="showTagModal = false" class="px-4 py-2 border rounded-lg hover:bg-gray-50">
-                    Cancel
-                </button>
-                <button @click="showTagModal = false" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                    Add Tags
-                </button>
-            </div>
-        </div>
-    </div>
-
     <script>
-        // Initialize Feather Icons
-        document.addEventListener('DOMContentLoaded', function() {
-            feather.replace();
+      function showBulkTagModal() {
+    Swal.fire({
+        title: 'Add Bulk Tags',
+        input: 'textarea',
+        inputPlaceholder: 'Enter tags separated by commas...',
+        showCancelButton: true,
+        confirmButtonText: 'Add Tags',
+        showLoaderOnConfirm: true,
+        preConfirm: (tags) => {
+            return fetch('AdminDashboard.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `bulk_tags=${encodeURIComponent(tags)}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                    throw new Error(data.error || 'Error adding tags');
+                }
+                return data;
+            });
+        }
+    }).then((result) => {
+        if (result.value) {
+            Swal.fire({
+                title: 'Success',
+                text: 'Tags have been added successfully',
+                icon: 'success'
+            }).then(() => {
+                window.location.reload();
+            });
+        }
+    });
+}
+
+function manageCategory(categoryId, action) {
+    if (action === 'delete') {
+        Swal.fire({
+            title: 'Are you sure?',
+            text: "You won't be able to revert this!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, delete it!',
+            cancelButtonText: 'No, cancel!'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                submitCategoryAction(categoryId, action);
+            }
         });
+    } else {
+        submitCategoryAction(categoryId, action);
+    }
+}
+
+function submitCategoryAction(categoryId, action) {
+    fetch('AdminDashboard.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `manage_category_id=${categoryId}&action=${action}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            Swal.fire('Success', 'Category action completed successfully', 'success')
+            .then(() => {
+                window.location.reload();
+            });
+        } else {
+            Swal.fire('Error', data.error || 'An error occurred', 'error');
+        }
+    });
+}
+
+
+
+// Update the existing validateTeacher function
+function validateTeacher(teacherId, validate) {
+    Swal.fire({
+        title: 'Are you sure?',
+        text: validate ? 'This will approve the teacher account' : 'This will reject the teacher account',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: validate ? 'Yes, approve' : 'Yes, reject',
+        cancelButtonText: 'Cancel'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            fetch('AdminDashboard.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `validate_teacher_id=${teacherId}&validate=${validate ? '1' : '0'}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({
+                        title: 'Success',
+                        text: validate ? 'Teacher has been approved' : 'Teacher has been rejected',
+                        icon: 'success'
+                    }).then(() => {
+                        window.location.reload();
+                    });
+                } else {
+                    Swal.fire('Error', data.error || 'An error occurred', 'error');
+                }
+            });
+        }
+    });
+}
+       
+
+function manageUser(userId, action) {
+    const actions = {
+        'activate': 'activate this user',
+        'deactivate': 'deactivate this user',
+        'delete': 'delete this user'
+    };
+
+    Swal.fire({
+        title: 'Are you sure?',
+        text: `You are about to ${actions[action]}`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: `Yes, ${action}`,
+        cancelButtonText: 'Cancel'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            fetch('AdminDashboard.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `manage_user_id=${userId}&action=${action}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({
+                        title: 'Success',
+                        text: `User has been ${action}d`,
+                        icon: 'success'
+                    }).then(() => {
+                        window.location.reload();
+                    });
+                } else {
+                    Swal.fire('Error', data.error || 'An error occurred', 'error');
+                }
+            });
+        }
+    });
+}
+
+function manageCourse(courseId, action) {
+    if (action === 'delete') {
+        Swal.fire({
+            title: 'Are you sure?',
+            text: "This will permanently delete the course and all associated data",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, delete it',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                submitCourseAction(courseId, action);
+            }
+        });
+    } else {
+        submitCourseAction(courseId, action);
+    }
+}
+function submitCourseAction(courseId, action) {
+    fetch('AdminDashboard.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `manage_course_id=${courseId}&action=${action}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            Swal.fire({
+                title: 'Success',
+                text: `Course has been ${action}d successfully`,
+                icon: 'success'
+            }).then(() => {
+                window.location.reload();
+            });
+        } else {
+            Swal.fire('Error', data.error || 'An error occurred', 'error');
+        }
+    });
+}
+
+        function manageTag(tagId, action) {
+            fetch('AdminDashboard.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    manage_tag_id: tagId,
+                    action: action
+                })
+            }).then(response => response.json()).then(data => {
+                if (data.success) {
+                    Swal.fire('Success', 'Tag management action successful.', 'success');
+                } else {
+                    Swal.fire('Error', 'An error occurred while managing tag.', 'error');
+                }
+            });
+        }
+
+        function bulkAddTags() {
+            // Logic to bulk add tags
+        }
+
+        document.addEventListener('alpine:init', () => {
+    console.log('Alpine.js initialized');
+    Alpine.data('dashboard', () => ({
+        activeTab: 'stats'
+    }));
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOM fully loaded and parsed');
+    feather.replace();
+});
+
     </script>
 </body>
 </html>
