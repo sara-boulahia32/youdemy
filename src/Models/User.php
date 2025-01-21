@@ -229,5 +229,7 @@ $stmt->bindValue(':validate', $validate ? 1 : 0, PDO::PARAM_INT);
             ");
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
+        
+
     }
 
