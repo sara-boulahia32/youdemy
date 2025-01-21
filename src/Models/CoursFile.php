@@ -6,12 +6,11 @@ namespace Models;
 use Database\Database;
 use Interfaces\ICreateCourse;
 use Models\Course;
-
-class CoursVideo extends Course {
+class CoursFile extends Course {
     public function create() {
         $db = Database::getInstance()->getConnection();
         $stmt = $db->prepare("INSERT INTO Courses (title, description, category, price, status, media_path, content_type, is_approved, id_author) 
-                             VALUES (:title, :description, :category, :price, :status, :media_path, 'video', :is_approved, :id_author)");
+                             VALUES (:title, :description, :category, :price, :status, :media_path, 'file', :is_approved, :id_author)");
         
         $stmt->execute([
             ':title' => $this->title,
@@ -28,4 +27,3 @@ class CoursVideo extends Course {
         return $this->id;
     }
 }
-
