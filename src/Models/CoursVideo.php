@@ -10,25 +10,39 @@ use Models\Course;
 class CoursVideo extends Course {
     public $content;
     public function create() {
-        
-        $db = Database::getInstance()->getConnection();
-        $stmt = $db->prepare("INSERT INTO Courses (title, description, category, price, content, status, media_path, content_type, is_approved, id_author) 
-                             VALUES (:title, :description, :content, :category, :price, :status, :media_path, 'video', :is_approved, :id_author)");
-        
-        $stmt->execute([
-            ':title' => $this->title,
-            ':description' => $this->description,
-            ':category' => $this->category,
-            ':price' => $this->price,
-            ':content' => $this->content,
-            ':status' => $this->status,
-            ':media_path' => $this->media_path,
-            ':is_approved' => $this->is_approved,
-            ':id_author' => $this->id_author
-        ]);
-        
-        $this->id = $db->lastInsertId();
-        return $this->id;
-    }
-}
+        $pdo = Database::getInstance()->getConnection();
+        $stmt = $pdo->prepare("INSERT INTO Courses (title, content, category, description, price, media_path, content_type, is_approved, id_author) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt->execute([$this->title, $this->media_path, $this->category, $this->description, $this->price, $this->media_path, "video", $this->is_approved, $this->id_author]);
+        $course_id = $pdo->lastInsertId();
 
+    }
+
+    // public function ajouter() {
+    //     $type = 'video';
+    //     $this->setType($type);
+    //     $pdo = Database::getInstance()->getConnection();
+    //     $stmt = $pdo->prepare("INSERT INTO Cours (titre, description, categorie_id, image_path, video_url, contenu_type, enseignant_id) VALUES (:titre, :description, :id_categorie, :image_path, :video_url, :type, :enseignant_id)");
+    //     $stmt->bindParam(':titre', $this->titre);
+    //     $stmt->bindParam(':description', $this->description);
+    //     $stmt->bindParam(':id_categorie', $this->id_categorie, PDO::PARAM_INT);
+    //     $stmt->bindParam(':image_path', $this->image_path);
+    //     $stmt->bindParam(':video_url', $this->video_url);
+    //     $stmt->bindParam(':type', $this->type);
+    //     $stmt->bindParam(':enseignant_id', $this->enseignant_id, PDO::PARAM_INT);
+
+    //     if ($stmt->execute()) {
+    //         $this->id = $pdo->lastInsertId();
+    //         return true;
+    //     } else {
+    //         return false;
+    //     }
+    // }
+
+    // public function afficherCours() {
+    //     return "<video src='" . $this->video_url . "'></video>";
+    // }
+
+    // public function setVideo_url($video_url) {
+    //     $this->video_url = $video_url;
+    // }
+}
