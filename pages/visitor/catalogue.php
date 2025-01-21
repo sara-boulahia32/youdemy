@@ -5,48 +5,37 @@ use Models\Course;
 use Models\Category;
 use Database\Database;
 
-session_start();
-
-$showSuccessAlert = false;
+session_start(); // Start session to access logged-in user
+$showSuccessAlert = false; 
 $showErrorAlert = false;
-$isEnrolled = false;
-
 // Handle the enrollment logic
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['course_id'])) {
     try {
         $db = Database::getInstance()->getConnection();
         $course_id = $_POST['course_id'];
-        
-        // Check if user is logged in
-        if (!isset($_SESSION['user_id'])) {
+        $start_date = date('Y-m-d'); // Start date is today
+        $end_date = date('Y-m-d', strtotime('+1 year')); // End date is one year from today
+
+        // Get the logged-in user's ID
+        if (isset($_SESSION['user_id'])) {
+            $user_id = $_SESSION['user_id'];
+        } else {
             throw new Exception("User is not logged in.");
         }
-        
-        $user_id = $_SESSION['user_id'];
-        
-        // Check if user is already enrolled
-        $checkStmt = $db->prepare("SELECT COUNT(*) FROM Reservations WHERE id_user = ? AND id_course = ?");
-        $checkStmt->execute([$user_id, $course_id]);
-        if ($checkStmt->fetchColumn() > 0) {
-            $isEnrolled = true;
-            throw new Exception("You are already enrolled in this course.");
-        }
-
-        $start_date = date('Y-m-d');
-        $end_date = date('Y-m-d', strtotime('+1 year'));
 
         // Insert the reservation
         $stmt = $db->prepare("INSERT INTO Reservations (id_user, id_course, startDate, endDate) VALUES (?, ?, ?, ?)");
         $stmt->execute([$user_id, $course_id, $start_date, $end_date]);
 
-        $showSuccessAlert = true;
-        $isEnrolled = true;
+        // Show success alert using SweetAlert
+        $showSuccessAlert = true; 
 
     } catch (Exception $e) {
-        $showErrorAlert = true;
+        // Show error alert using SweetAlert
+        $showErrorAlert = true; 
+
     }
 }
-
 
 $coursesPerPage = isset($_GET['coursesPerPage']) ? (int) $_GET['coursesPerPage'] : 3;
 $page = isset($_GET['page']) ? (int) $_GET['page'] : 1;

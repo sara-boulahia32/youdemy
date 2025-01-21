@@ -4,8 +4,9 @@ namespace Models;
 use Database\Database;
 use PDO;
 use PDOException;
-use Interfaces\ICreateCourse;
-abstract class Course implements ICreateCourse {
+
+
+class Course {
     protected $id;
     protected $title;
     protected $description;
@@ -17,8 +18,8 @@ abstract class Course implements ICreateCourse {
     protected $id_author;
     protected $content_type;
 
-    public function __construct($title, $description, $category, $price, $status, $media_path, $is_approved, $id_author, $content_type, $id = null) {
-        $this->id = $id;
+    public function __construct($title, $description, $category, $price, $status, $media_path, $is_approved, $id_author, $content_type) {
+        // $this->id = $id;
         $this->title = $title;
         $this->description = $description;
         $this->category = $category;
@@ -30,47 +31,6 @@ abstract class Course implements ICreateCourse {
         $this->content_type = $content_type;
     }
 
-    // Factory method with ID support
-    public static function createCourse($type, $title, $description, $category, $price, $status, $media_path, $is_approved, $id_author, $id = null) {
-        switch (strtolower($type)) {
-            case 'text':
-                return new CoursTexte($title, $description, $category, $price, $status, $media_path, $is_approved, $id_author, 'text', $id);
-            case 'video':
-                return new CoursVideo($title, $description, $category, $price, $status, $media_path, $is_approved, $id_author, 'video', $id);
-            case 'file':
-                return new CoursFile($title, $description, $category, $price, $status, $media_path, $is_approved, $id_author, 'file', $id);
-            case 'image':
-                return new CoursImage($title, $description, $category, $price, $status, $media_path, $is_approved, $id_author, 'image', $id);
-            default:
-                throw new \InvalidArgumentException("Invalid course type: $type");
-        }
-    }
-
-    // Static method to get course by ID
-    public static function getById($id) {
-        $db = Database::getInstance()->getConnection();
-        $stmt = $db->prepare("SELECT * FROM Courses WHERE id_course = :id");
-        $stmt->bindValue(':id', $id, PDO::PARAM_INT);
-        $stmt->execute();
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-        
-        if ($row) {
-            return self::createCourse(
-                $row['content_type'],
-                $row['title'],
-                $row['description'],
-                $row['category'],
-                $row['price'],
-                $row['status'],
-                $row['media_path'],
-                $row['is_approved'],
-                $row['id_author'],
-                $row['id_course'] // Pass the ID
-            );
-        }
-        return null;
-    }
-
     public static function getPaginated($limit, $offset) {
         $db = Database::getInstance()->getConnection();
         $stmt = $db->prepare("SELECT * FROM Courses LIMIT :limit OFFSET :offset");
@@ -79,9 +39,10 @@ abstract class Course implements ICreateCourse {
         $stmt->execute();
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        return array_map(function($row) {
-            return self::createCourse(
-                $row['content_type'],
+        $courses = [];
+        foreach ($rows as $row) {
+            $courses[] = new self(
+                $row['id_course'],
                 $row['title'],
                 $row['description'],
                 $row['category'],
@@ -90,44 +51,12 @@ abstract class Course implements ICreateCourse {
                 $row['media_path'],
                 $row['is_approved'],
                 $row['id_author'],
-                $row['id_course'] // Pass the ID
+                $row['content_type']
             );
-        }, $rows);
-    }
-
-    // Getters
-    public function getId() { return $this->id; }
-    public function getTitle() { return $this->title; }
-    public function getDescription() { return $this->description; }
-    public function getCategory() { return $this->category; }
-    public function getPrice() { return $this->price; }
-    public function getStatus() { return $this->status; }
-    public function getMediaPath() { return $this->media_path; }
-    public function isApproved() { return $this->is_approved; }
-    public function getAuthor() { return $this->id_author; }
-    public function getContentType() { return $this->content_type; }
-
-    // Method to create reservation
-    public function createReservation($userId) {
-        if (!$this->id) {
-            throw new \Exception("Cannot create reservation: Course ID is not set");
         }
 
-        $db = Database::getInstance()->getConnection();
-        $stmt = $db->prepare("INSERT INTO Reservations (id_user, id_course, startDate, endDate) VALUES (:user_id, :course_id, :start_date, :end_date)");
-        
-        $startDate = date('Y-m-d');
-        $endDate = date('Y-m-d', strtotime('+1 year'));
-        
-        return $stmt->execute([
-            ':user_id' => $userId,
-            ':course_id' => $this->id,
-            ':start_date' => $startDate,
-            ':end_date' => $endDate
-        ]);
+        return $courses;
     }
-
-    abstract public function create();
 
     public static function getTotalCourses() {
         $db = Database::getInstance()->getConnection();
@@ -211,7 +140,28 @@ abstract class Course implements ICreateCourse {
         }
         return $tags;
     }
+    public static function getById($id) {
+        $db = Database::getInstance()->getConnection();
+        $stmt = $db->prepare("SELECT * FROM Courses WHERE id_course = :id");
+        $stmt->bindValue(':id', $id, PDO::PARAM_INT);
+        $stmt->execute();
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+        return $row ? new self(
+            $row['id_course'],
+            $row['title'],
+            $row['description'],
+            $row['category'],
+            $row['price'],
+            $row['status'],
+            $row['media_path'],
+            $row['is_approved'],
+            $row['id_author'],
+            $row['content_type']
 
+
+        ) : null;
+    }
     public function getEnrollments() { $db = Database::getInstance()->getConnection(); $stmt = $db->prepare("SELECT * FROM Reservations WHERE id_course = ?"); $stmt->execute([$this->id]); return $stmt->fetchAll(PDO::FETCH_ASSOC); }
     public static function getByAuthor($author_id) {
         $db = Database::getInstance()->getConnection();
@@ -298,6 +248,11 @@ abstract class Course implements ICreateCourse {
     }
 
     public static function update($id, $title, $description, $category, $price, $status, $media_path, $is_approved, $content_type) {
+        // Validate content type
+        // $valid_content_types = ['video', 'file', 'image', 'text'];
+        // if (!in_array(strtolower($content_type), $valid_content_types)) {
+        //     throw new Exception("Invalid content type");
+        // }
     
         $db = Database::getInstance()->getConnection();
         $stmt = $db->prepare("UPDATE Courses SET 
@@ -367,7 +322,46 @@ abstract class Course implements ICreateCourse {
             $stmt = $db->query("SELECT * FROM Courses");
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
+    
 
+
+    
+
+    public function getTitle() {
+        return $this->title;
+    }
+    public function getid() {
+        return $this->id;
+    }
+
+    public function getDescription() {
+        return $this->description;
+    }
+
+    public function getCategory() {
+        return $this->category;
+    }
+
+    public function getPrice() {
+        return $this->price;
+    }
+
+    public function getStatus() {
+        return $this->status;
+    }
+
+    public function getMediaPath() {
+        return $this->media_path;
+    }
+
+    public function isApproved() {
+        return $this->is_approved;
+    }
+    public function getauthor() {
+        return $this->id_author;
+    }
+    public function getContentType() {  
+        return $this->content_type;; }
 }
 
 

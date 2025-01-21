@@ -4,11 +4,15 @@ namespace Models;
 
 
 use Database\Database;
-// use Interfaces\ICreateCourse;
+use Interfaces\ICreateCourse;
 use Models\Course;
 
-class CoursVideo extends Course {
-    public $content;
+class CoursVideo extends Course implements ICreateCourse {
+
+    public function __construct($title, $description, $category, $price, $status, $media_path, $is_approved, $id_author, $content_type) {
+        parent::__construct($title, $description, $category, $price, $status, $media_path, $is_approved, $id_author, $content_type);
+    }
+
     public function create() {
         $pdo = Database::getInstance()->getConnection();
         $stmt = $pdo->prepare("INSERT INTO Courses (title, content, category, description, price, media_path, content_type, is_approved, id_author) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
