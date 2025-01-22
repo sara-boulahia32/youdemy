@@ -12,14 +12,16 @@ class User {
     private $passwordHash;
     private $role; 
     private $is_active;
+    private $is_valid;
 
-    public function __construct($id, $name, $email, $passwordHash = null, $role = 'student', $is_active = 1) {
+    public function __construct($id, $name, $email, $passwordHash = null, $role = 'student', $is_active = 1, $is_valid = 0) {
         $this->id = $id;
         $this->name = $name;
         $this->email = $email;
         $this->passwordHash = $passwordHash;
         $this->role = $role;
         $this->is_active = $is_active;
+        $this->is_valid = $is_valid;
     }
 
     // Getters
@@ -28,6 +30,7 @@ class User {
     public function getEmail() { return $this->email; }
     public function getRole() { return $this->role; } 
     public function getIsActive() { return $this->is_active; }
+    public function getIsValid() { return $this->is_valid; }
 
     // Password hashing method
     private function setPasswordHash($password) {

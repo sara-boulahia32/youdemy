@@ -8,10 +8,10 @@ use Database\database;
 session_start(); // Ensure session is started to check user role
 
 // Ensure the user is a teacher
-// if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'teacher') {
-//     header("Location: login.php");
-//     exit();
-// }
+if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'teacher') {
+    header("Location: login.php");
+    exit();
+}
 
 $teacher_id = $_SESSION['user_id'];
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['delete_course_id'])) {

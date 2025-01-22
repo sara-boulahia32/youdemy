@@ -8,22 +8,48 @@ $showAlert = false;
 $alertMessage = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $email = $_POST['email'];
-    $password = $_POST['password'];
+  $email = $_POST['email'];
+  $password = $_POST['password'];
 
-    try {
-        $user = User::signin($email, $password);
-        // Start session and set user session variables
-        session_start();
-        $_SESSION['id_user'] = $user->getId();
-        $_SESSION['name'] = $user->getName();
-        $_SESSION['role'] = $user->getRole();
-        $showAlert = true;
-        $alertMessage = "Welcome back, " . $user->getName() . "!";
-    } catch (Exception $e) {
-        $error = $e->getMessage();
-    }
+  try {
+      $user = User::signin($email, $password);
+      // Start session and set user session variables
+      if($user->getIsActive() == true){
+        if($user->getIsValid() == true){
+          session_start();
+          $_SESSION['id_user'] = $user->getId();
+          $_SESSION['user_name'] = $user->getName();
+          $_SESSION['role'] = $user->getRole();
+  
+          if ($_SESSION['role'] === 'admin') {
+            // Redirect to admin dashboard
+            header("Location: ../admin/AdminDashboard.php");
+            exit;
+        } elseif ($_SESSION['role'] === 'student' ) {
+            // Redirect to student homepage
+            header("Location: catalogue.php");
+            exit;
+        } elseif ($_SESSION['role'] === 'teacher') {
+            // Redirect to teacher homepage
+            header("Location: ../teacher/TeacherDashboard.php");
+            exit;
+        }
+          $showAlert = true;
+          $alertMessage = "Welcome back, " . $user->getName() . "!";
+          }else{
+            echo '<script>alert("This account is not valid yet")</script>';
+          }
+        }else{
+          echo '<script>alert("This account is banned")</script>';
+        }
+      
+        
+      
+  } catch (Exception $e) {
+      $error = $e->getMessage();
+  }
 }
+
 ?>
 
 <!DOCTYPE html>
