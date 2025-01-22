@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/../../src/config/autoloader.php';
+    require_once __DIR__ . '/../../src/config/autoloader.php';
 
 use Models\Course;
 use Models\User;
@@ -11,10 +11,10 @@ session_start();
 
 
 // Ensure the user is an admin
-// if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
-//     header("Location: login.php");
-//     exit();
-// }
+if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
+    header("Location: login.php");
+    exit();
+}
 
 // Handle AJAX requests
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
