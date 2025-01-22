@@ -46,6 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if (isset($_POST['validate_teacher_id'])) {
         try {
             $teacher_id = intval($_POST['validate_teacher_id']);
+            var_dump(intval('rgf444444444ffg'));
             $validate = $_POST['validate'] === '1';
             User::validateTeacher($teacher_id, $validate);
             echo json_encode(['success' => true]);
